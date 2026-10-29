@@ -1,0 +1,27 @@
+# Single entry point: the web app, the API and the developer API share one origin (cookies just work).
+{$SITE_ADDRESS::80} {
+	encode zstd gzip
+
+	request_body {
+		max_size 2GB
+	}
+
+	@api path /api/* /v1/*
+	handle @api {
+		reverse_proxy api:8000 {
+			transport http {
+				read_timeout 15m
+				write_timeout 15m
+			}
+		}
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+}

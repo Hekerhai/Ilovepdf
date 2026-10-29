@@ -1,0 +1,2086 @@
+{
+ "categories": [
+  {
+   "id": "organize",
+   "name": "Organize"
+  },
+  {
+   "id": "optimize",
+   "name": "Optimize"
+  },
+  {
+   "id": "convert_to_pdf",
+   "name": "Convert to PDF"
+  },
+  {
+   "id": "convert_from_pdf",
+   "name": "Convert from PDF"
+  },
+  {
+   "id": "edit",
+   "name": "Edit"
+  },
+  {
+   "id": "security",
+   "name": "Security"
+  },
+  {
+   "id": "intelligence",
+   "name": "Intelligence"
+  }
+ ],
+ "tools": [
+  {
+   "id": "pdf_to_images",
+   "name": "PDF to JPG",
+   "description": "Turn each page into a JPG or PNG image.",
+   "category": "convert_from_pdf",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": true,
+   "produces_pdf": false,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "format": {
+      "default": "jpg",
+      "enum": [
+       "jpg",
+       "png"
+      ],
+      "title": "Format",
+      "type": "string"
+     },
+     "dpi": {
+      "default": 150,
+      "description": "Image resolution",
+      "maximum": 600,
+      "minimum": 36,
+      "title": "Dpi",
+      "type": "integer"
+     },
+     "quality": {
+      "default": 90,
+      "description": "JPG quality",
+      "maximum": 100,
+      "minimum": 30,
+      "title": "Quality",
+      "type": "integer"
+     },
+     "pages": {
+      "default": "all",
+      "title": "Pages",
+      "type": "string"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "pdf_to_word",
+   "name": "PDF to Word",
+   "description": "Convert PDFs into editable DOCX documents.",
+   "category": "convert_from_pdf",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": true,
+   "browser_capable": false,
+   "produces_pdf": false,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "title": "NoOptions",
+    "type": "object"
+   }
+  },
+  {
+   "id": "pdf_to_powerpoint",
+   "name": "PDF to PowerPoint",
+   "description": "Turn each page into a slide in a PPTX deck.",
+   "category": "convert_from_pdf",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": true,
+   "browser_capable": false,
+   "produces_pdf": false,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "title": "NoOptions",
+    "type": "object"
+   }
+  },
+  {
+   "id": "pdf_to_excel",
+   "name": "PDF to Excel",
+   "description": "Pull tables out of PDFs into an XLSX spreadsheet.",
+   "category": "convert_from_pdf",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": true,
+   "browser_capable": false,
+   "produces_pdf": false,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "sheet_per": {
+      "default": "page",
+      "description": "One sheet per page or per table",
+      "enum": [
+       "page",
+       "table"
+      ],
+      "title": "Sheet Per",
+      "type": "string"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "pdf_to_text",
+   "name": "PDF to Text",
+   "description": "Extract all text into a plain .txt file.",
+   "category": "convert_from_pdf",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": false,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "keep_layout": {
+      "default": false,
+      "description": "Keep the visual layout with spaces",
+      "title": "Keep Layout",
+      "type": "boolean"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "pdf_to_markdown",
+   "name": "PDF to Markdown",
+   "description": "Extract text with headings as Markdown, ready for docs or AI tools.",
+   "category": "convert_from_pdf",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": false,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "title": "NoOptions",
+    "type": "object"
+   }
+  },
+  {
+   "id": "pdf_to_pdfa",
+   "name": "PDF to PDF/A",
+   "description": "Convert to PDF/A for long-term archiving.",
+   "category": "convert_from_pdf",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": true,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "part": {
+      "default": 2,
+      "description": "PDF/A conformance part (2 is the common choice)",
+      "enum": [
+       1,
+       2,
+       3
+      ],
+      "title": "Part",
+      "type": "integer"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "extract_images",
+   "name": "Extract images",
+   "description": "Save every embedded image at its original quality.",
+   "category": "convert_from_pdf",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": false,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "min_size_px": {
+      "default": 32,
+      "description": "Skip images smaller than this (icons, lines)",
+      "minimum": 1,
+      "title": "Min Size Px",
+      "type": "integer"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "merge",
+   "name": "Merge PDF",
+   "description": "Combine several PDFs into one, in the order you choose.",
+   "category": "organize",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 2,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": true,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "add_bookmarks": {
+      "default": true,
+      "description": "Add a bookmark for each merged file",
+      "title": "Add Bookmarks",
+      "type": "boolean"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "split",
+   "name": "Split PDF",
+   "description": "Split by page ranges, every N pages, file size or bookmarks.",
+   "category": "organize",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": 1,
+   "premium": false,
+   "browser_capable": true,
+   "produces_pdf": true,
+   "options_schema": {
+    "$defs": {
+     "SplitMode": {
+      "enum": [
+       "ranges",
+       "every",
+       "size",
+       "bookmarks",
+       "all"
+      ],
+      "title": "SplitMode",
+      "type": "string"
+     }
+    },
+    "additionalProperties": false,
+    "properties": {
+     "mode": {
+      "$ref": "#/$defs/SplitMode",
+      "default": "ranges",
+      "description": "How to split"
+     },
+     "ranges": {
+      "default": "1-1",
+      "description": "Page ranges, one file per range, e.g. 1-3, 4-8, 9-",
+      "title": "Ranges",
+      "type": "string"
+     },
+     "every": {
+      "default": 1,
+      "description": "Pages per file (for 'every' mode)",
+      "minimum": 1,
+      "title": "Every",
+      "type": "integer"
+     },
+     "max_size_mb": {
+      "default": 5.0,
+      "description": "Max size per file in MB (for 'size' mode)",
+      "exclusiveMinimum": 0,
+      "title": "Max Size Mb",
+      "type": "number"
+     },
+     "merge_output": {
+      "default": false,
+      "description": "Put all extracted ranges into a single PDF",
+      "title": "Merge Output",
+      "type": "boolean"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "split_in_half",
+   "name": "Split in half",
+   "description": "Cut each page into two, for scanned book spreads.",
+   "category": "organize",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": 1,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "direction": {
+      "default": "vertical",
+      "description": "Vertical gives left/right halves, horizontal gives top/bottom",
+      "enum": [
+       "vertical",
+       "horizontal"
+      ],
+      "title": "Direction",
+      "type": "string"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "remove_pages",
+   "name": "Remove pages",
+   "description": "Delete the pages you don't need.",
+   "category": "organize",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": 1,
+   "premium": false,
+   "browser_capable": true,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "pages": {
+      "description": "Pages, e.g. 1, 3-5, 9-",
+      "title": "Pages",
+      "type": "string"
+     }
+    },
+    "required": [
+     "pages"
+    ],
+    "title": "_PageSelectOptions",
+    "type": "object"
+   }
+  },
+  {
+   "id": "extract_pages",
+   "name": "Extract pages",
+   "description": "Pull selected pages out into a new PDF.",
+   "category": "organize",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": 1,
+   "premium": false,
+   "browser_capable": true,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "pages": {
+      "description": "Pages, e.g. 1, 3-5, 9-",
+      "title": "Pages",
+      "type": "string"
+     }
+    },
+    "required": [
+     "pages"
+    ],
+    "title": "_PageSelectOptions",
+    "type": "object"
+   }
+  },
+  {
+   "id": "organize",
+   "name": "Organize PDF",
+   "description": "Reorder, rotate, delete and add blank pages, across one or more files.",
+   "category": "organize",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": true,
+   "produces_pdf": true,
+   "options_schema": {
+    "$defs": {
+     "PageRef": {
+      "properties": {
+       "file": {
+        "default": 0,
+        "description": "Index of the input file",
+        "minimum": 0,
+        "title": "File",
+        "type": "integer"
+       },
+       "page": {
+        "anyOf": [
+         {
+          "minimum": 1,
+          "type": "integer"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "default": null,
+        "description": "1-based page number; omit for a blank page",
+        "title": "Page"
+       },
+       "rotate": {
+        "default": 0,
+        "enum": [
+         0,
+         90,
+         180,
+         270
+        ],
+        "title": "Rotate",
+        "type": "integer"
+       }
+      },
+      "title": "PageRef",
+      "type": "object"
+     }
+    },
+    "additionalProperties": false,
+    "properties": {
+     "pages": {
+      "description": "The final page order",
+      "items": {
+       "$ref": "#/$defs/PageRef"
+      },
+      "minItems": 1,
+      "title": "Pages",
+      "type": "array"
+     }
+    },
+    "required": [
+     "pages"
+    ],
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "rotate",
+   "name": "Rotate PDF",
+   "description": "Rotate all pages or just the ones you pick.",
+   "category": "organize",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": true,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "angle": {
+      "default": 90,
+      "description": "Clockwise rotation",
+      "enum": [
+       90,
+       180,
+       270
+      ],
+      "title": "Angle",
+      "type": "integer"
+     },
+     "pages": {
+      "default": "all",
+      "description": "Pages to rotate",
+      "title": "Pages",
+      "type": "string"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "flip",
+   "name": "Flip PDF",
+   "description": "Mirror pages horizontally or vertically.",
+   "category": "organize",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "direction": {
+      "default": "horizontal",
+      "enum": [
+       "horizontal",
+       "vertical"
+      ],
+      "title": "Direction",
+      "type": "string"
+     },
+     "pages": {
+      "default": "all",
+      "title": "Pages",
+      "type": "string"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "alternate_mix",
+   "name": "Alternate & mix",
+   "description": "Interleave pages from several files, e.g. separately scanned fronts and backs.",
+   "category": "organize",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 2,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "reverse_last": {
+      "default": false,
+      "description": "Reverse the last file (backs scanned in reverse order)",
+      "title": "Reverse Last",
+      "type": "boolean"
+     },
+     "pages_per_take": {
+      "default": 1,
+      "description": "Pages to take from each file in turn",
+      "minimum": 1,
+      "title": "Pages Per Take",
+      "type": "integer"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "n_up",
+   "name": "N-up",
+   "description": "Print several pages per sheet.",
+   "category": "organize",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": 1,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "per_sheet": {
+      "default": 4,
+      "enum": [
+       2,
+       4,
+       6,
+       8,
+       9,
+       16
+      ],
+      "title": "Per Sheet",
+      "type": "integer"
+     },
+     "sheet_size": {
+      "default": "A4",
+      "enum": [
+       "A4",
+       "A3",
+       "Letter",
+       "Legal"
+      ],
+      "title": "Sheet Size",
+      "type": "string"
+     },
+     "margin_mm": {
+      "default": 5,
+      "maximum": 50,
+      "minimum": 0,
+      "title": "Margin Mm",
+      "type": "number"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "resize",
+   "name": "Resize pages",
+   "description": "Fit every page onto a standard paper size, keeping proportions.",
+   "category": "organize",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "size": {
+      "default": "A4",
+      "enum": [
+       "A3",
+       "A4",
+       "A5",
+       "Letter",
+       "Legal"
+      ],
+      "title": "Size",
+      "type": "string"
+     },
+     "margin_mm": {
+      "default": 0,
+      "maximum": 50,
+      "minimum": 0,
+      "title": "Margin Mm",
+      "type": "number"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "images_to_pdf",
+   "name": "JPG to PDF",
+   "description": "Turn photos and scans (JPG, PNG, WebP, TIFF...) into a PDF.",
+   "category": "convert_to_pdf",
+   "accepts": [
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".webp",
+    ".tif",
+    ".tiff",
+    ".bmp",
+    ".gif"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": true,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "page_size": {
+      "default": "fit",
+      "description": "'fit' makes each page the size of its image",
+      "enum": [
+       "fit",
+       "A4",
+       "Letter"
+      ],
+      "title": "Page Size",
+      "type": "string"
+     },
+     "orientation": {
+      "default": "auto",
+      "enum": [
+       "auto",
+       "portrait",
+       "landscape"
+      ],
+      "title": "Orientation",
+      "type": "string"
+     },
+     "margin_mm": {
+      "default": 0,
+      "maximum": 50,
+      "minimum": 0,
+      "title": "Margin Mm",
+      "type": "number"
+     },
+     "single_file": {
+      "default": true,
+      "description": "One PDF with all images, or one PDF per image",
+      "title": "Single File",
+      "type": "boolean"
+     }
+    },
+    "title": "ImagesOptions",
+    "type": "object"
+   }
+  },
+  {
+   "id": "word_to_pdf",
+   "name": "Word to PDF",
+   "description": "Convert DOC, DOCX, ODT and RTF documents to PDF.",
+   "category": "convert_to_pdf",
+   "accepts": [
+    ".doc",
+    ".docx",
+    ".odt",
+    ".rtf",
+    ".txt"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "title": "NoOptions",
+    "type": "object"
+   }
+  },
+  {
+   "id": "powerpoint_to_pdf",
+   "name": "PowerPoint to PDF",
+   "description": "Convert PPT, PPTX and ODP presentations to PDF.",
+   "category": "convert_to_pdf",
+   "accepts": [
+    ".ppt",
+    ".pptx",
+    ".odp",
+    ".pps",
+    ".ppsx"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "title": "NoOptions",
+    "type": "object"
+   }
+  },
+  {
+   "id": "excel_to_pdf",
+   "name": "Excel to PDF",
+   "description": "Convert XLS, XLSX, ODS and CSV spreadsheets to PDF.",
+   "category": "convert_to_pdf",
+   "accepts": [
+    ".xls",
+    ".xlsx",
+    ".ods",
+    ".csv"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "title": "NoOptions",
+    "type": "object"
+   }
+  },
+  {
+   "id": "html_to_pdf",
+   "name": "HTML to PDF",
+   "description": "Turn a web page (URL) or an HTML file into a PDF.",
+   "category": "convert_to_pdf",
+   "accepts": [
+    ".html",
+    ".htm"
+   ],
+   "min_files": 0,
+   "max_files": 1,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "A public web address, used when no file is uploaded",
+      "title": "Url"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "watermark",
+   "name": "Add watermark",
+   "description": "Stamp text or an image over your pages, once or tiled.",
+   "category": "edit",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "text": {
+      "anyOf": [
+       {
+        "maxLength": 200,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": "CONFIDENTIAL",
+      "title": "Text"
+     },
+     "image": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Image as a data URL; used instead of text when set",
+      "title": "Image"
+     },
+     "font_size": {
+      "default": 48,
+      "maximum": 400,
+      "minimum": 4,
+      "title": "Font Size",
+      "type": "number"
+     },
+     "color": {
+      "default": "#ef4444",
+      "title": "Color",
+      "type": "string"
+     },
+     "opacity": {
+      "default": 0.3,
+      "maximum": 1.0,
+      "minimum": 0.02,
+      "title": "Opacity",
+      "type": "number"
+     },
+     "rotation": {
+      "default": 45,
+      "maximum": 180,
+      "minimum": -180,
+      "title": "Rotation",
+      "type": "number"
+     },
+     "position": {
+      "default": "center",
+      "enum": [
+       "top-left",
+       "top-center",
+       "top-right",
+       "center",
+       "bottom-left",
+       "bottom-center",
+       "bottom-right"
+      ],
+      "title": "Position",
+      "type": "string"
+     },
+     "tiled": {
+      "default": false,
+      "description": "Repeat the watermark across the page",
+      "title": "Tiled",
+      "type": "boolean"
+     },
+     "image_scale": {
+      "default": 0.4,
+      "description": "Image width as a share of the page width",
+      "exclusiveMinimum": 0,
+      "maximum": 1,
+      "title": "Image Scale",
+      "type": "number"
+     },
+     "pages": {
+      "default": "all",
+      "title": "Pages",
+      "type": "string"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "page_numbers",
+   "name": "Add page numbers",
+   "description": "Number your pages, with the position, style and start you want.",
+   "category": "edit",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "position": {
+      "default": "bottom-center",
+      "enum": [
+       "top-left",
+       "top-center",
+       "top-right",
+       "center",
+       "bottom-left",
+       "bottom-center",
+       "bottom-right"
+      ],
+      "title": "Position",
+      "type": "string"
+     },
+     "template": {
+      "default": "{page}",
+      "description": "Use {page} and {total}, e.g. 'Page {page} of {total}'",
+      "title": "Template",
+      "type": "string"
+     },
+     "start_at": {
+      "default": 1,
+      "description": "Number shown on the first numbered page",
+      "title": "Start At",
+      "type": "integer"
+     },
+     "pages": {
+      "default": "all",
+      "title": "Pages",
+      "type": "string"
+     },
+     "skip_first": {
+      "default": false,
+      "description": "Don't number the cover page",
+      "title": "Skip First",
+      "type": "boolean"
+     },
+     "font_size": {
+      "default": 11,
+      "maximum": 72,
+      "minimum": 4,
+      "title": "Font Size",
+      "type": "number"
+     },
+     "color": {
+      "default": "#111827",
+      "title": "Color",
+      "type": "string"
+     },
+     "margin_mm": {
+      "default": 10,
+      "maximum": 100,
+      "minimum": 0,
+      "title": "Margin Mm",
+      "type": "number"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "header_footer",
+   "name": "Header & footer",
+   "description": "Add text to the top and bottom of pages, with page numbers, dates and file names.",
+   "category": "edit",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "header_left": {
+      "default": "",
+      "title": "Header Left",
+      "type": "string"
+     },
+     "header_center": {
+      "default": "",
+      "title": "Header Center",
+      "type": "string"
+     },
+     "header_right": {
+      "default": "",
+      "title": "Header Right",
+      "type": "string"
+     },
+     "footer_left": {
+      "default": "",
+      "title": "Footer Left",
+      "type": "string"
+     },
+     "footer_center": {
+      "default": "",
+      "description": "Tokens: {page}, {total}, {date}, {filename}",
+      "title": "Footer Center",
+      "type": "string"
+     },
+     "footer_right": {
+      "default": "{page} / {total}",
+      "title": "Footer Right",
+      "type": "string"
+     },
+     "font_size": {
+      "default": 9,
+      "maximum": 48,
+      "minimum": 4,
+      "title": "Font Size",
+      "type": "number"
+     },
+     "color": {
+      "default": "#374151",
+      "title": "Color",
+      "type": "string"
+     },
+     "margin_mm": {
+      "default": 10,
+      "maximum": 100,
+      "minimum": 0,
+      "title": "Margin Mm",
+      "type": "number"
+     },
+     "pages": {
+      "default": "all",
+      "title": "Pages",
+      "type": "string"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "bates",
+   "name": "Bates numbering",
+   "description": "Stamp sequential legal identifiers across one or many documents.",
+   "category": "edit",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "prefix": {
+      "default": "DOC-",
+      "maxLength": 40,
+      "title": "Prefix",
+      "type": "string"
+     },
+     "suffix": {
+      "default": "",
+      "maxLength": 40,
+      "title": "Suffix",
+      "type": "string"
+     },
+     "start": {
+      "default": 1,
+      "minimum": 0,
+      "title": "Start",
+      "type": "integer"
+     },
+     "digits": {
+      "default": 6,
+      "maximum": 12,
+      "minimum": 1,
+      "title": "Digits",
+      "type": "integer"
+     },
+     "position": {
+      "default": "bottom-right",
+      "enum": [
+       "top-left",
+       "top-center",
+       "top-right",
+       "center",
+       "bottom-left",
+       "bottom-center",
+       "bottom-right"
+      ],
+      "title": "Position",
+      "type": "string"
+     },
+     "font_size": {
+      "default": 10,
+      "maximum": 48,
+      "minimum": 4,
+      "title": "Font Size",
+      "type": "number"
+     },
+     "color": {
+      "default": "#111827",
+      "title": "Color",
+      "type": "string"
+     },
+     "margin_mm": {
+      "default": 8,
+      "maximum": 100,
+      "minimum": 0,
+      "title": "Margin Mm",
+      "type": "number"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "crop",
+   "name": "Crop PDF",
+   "description": "Trim page margins.",
+   "category": "edit",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "top_mm": {
+      "default": 10,
+      "minimum": 0,
+      "title": "Top Mm",
+      "type": "number"
+     },
+     "right_mm": {
+      "default": 10,
+      "minimum": 0,
+      "title": "Right Mm",
+      "type": "number"
+     },
+     "bottom_mm": {
+      "default": 10,
+      "minimum": 0,
+      "title": "Bottom Mm",
+      "type": "number"
+     },
+     "left_mm": {
+      "default": 10,
+      "minimum": 0,
+      "title": "Left Mm",
+      "type": "number"
+     },
+     "pages": {
+      "default": "all",
+      "title": "Pages",
+      "type": "string"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "edit_metadata",
+   "name": "Edit metadata",
+   "description": "Change or wipe the title, author, subject and keywords.",
+   "category": "edit",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "title": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "title": "Title"
+     },
+     "author": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "title": "Author"
+     },
+     "subject": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "title": "Subject"
+     },
+     "keywords": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "title": "Keywords"
+     },
+     "creator": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "title": "Creator"
+     },
+     "remove_all": {
+      "default": false,
+      "description": "Strip all metadata first (privacy)",
+      "title": "Remove All",
+      "type": "boolean"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "create_bookmarks",
+   "name": "Create bookmarks",
+   "description": "Add a clickable table of contents (outline).",
+   "category": "edit",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": 1,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "$defs": {
+     "Bookmark": {
+      "properties": {
+       "title": {
+        "maxLength": 300,
+        "minLength": 1,
+        "title": "Title",
+        "type": "string"
+       },
+       "page": {
+        "minimum": 1,
+        "title": "Page",
+        "type": "integer"
+       },
+       "level": {
+        "default": 0,
+        "description": "Nesting depth, 0 = top level",
+        "maximum": 5,
+        "minimum": 0,
+        "title": "Level",
+        "type": "integer"
+       }
+      },
+      "required": [
+       "title",
+       "page"
+      ],
+      "title": "Bookmark",
+      "type": "object"
+     }
+    },
+    "additionalProperties": false,
+    "properties": {
+     "bookmarks": {
+      "items": {
+       "$ref": "#/$defs/Bookmark"
+      },
+      "minItems": 1,
+      "title": "Bookmarks",
+      "type": "array"
+     },
+     "replace_existing": {
+      "default": true,
+      "title": "Replace Existing",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "bookmarks"
+    ],
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "delete_annotations",
+   "name": "Delete annotations",
+   "description": "Remove comments, highlights, stamps and other markup.",
+   "category": "edit",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "keep_links": {
+      "default": true,
+      "description": "Keep clickable links",
+      "title": "Keep Links",
+      "type": "boolean"
+     },
+     "keep_form_fields": {
+      "default": true,
+      "description": "Keep fillable form fields",
+      "title": "Keep Form Fields",
+      "type": "boolean"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "flatten",
+   "name": "Flatten PDF",
+   "description": "Burn form fields and annotations into the page so they can't be changed.",
+   "category": "edit",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "title": "NoOptions",
+    "type": "object"
+   }
+  },
+  {
+   "id": "sign",
+   "name": "Sign PDF",
+   "description": "Draw, type or upload your signature and place it anywhere, on as many pages as you need.",
+   "category": "security",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": 1,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "$defs": {
+     "Placement": {
+      "description": "Where to draw a signature, as fractions of the visible page (0,0 = top-left, as on screen).",
+      "properties": {
+       "page": {
+        "minimum": 1,
+        "title": "Page",
+        "type": "integer"
+       },
+       "x": {
+        "maximum": 1,
+        "minimum": 0,
+        "title": "X",
+        "type": "number"
+       },
+       "y": {
+        "maximum": 1,
+        "minimum": 0,
+        "title": "Y",
+        "type": "number"
+       },
+       "width": {
+        "exclusiveMinimum": 0,
+        "maximum": 1,
+        "title": "Width",
+        "type": "number"
+       }
+      },
+      "required": [
+       "page",
+       "x",
+       "y",
+       "width"
+      ],
+      "title": "Placement",
+      "type": "object"
+     }
+    },
+    "additionalProperties": false,
+    "properties": {
+     "signature": {
+      "description": "Signature image as a data URL (drawn, typed or uploaded)",
+      "title": "Signature",
+      "type": "string"
+     },
+     "placements": {
+      "items": {
+       "$ref": "#/$defs/Placement"
+      },
+      "minItems": 1,
+      "title": "Placements",
+      "type": "array"
+     },
+     "add_date": {
+      "default": false,
+      "description": "Print today's date under the signature",
+      "title": "Add Date",
+      "type": "boolean"
+     },
+     "flatten": {
+      "default": true,
+      "description": "Flatten so the signature can't be moved",
+      "title": "Flatten",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "signature",
+     "placements"
+    ],
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "ai_summarize",
+   "name": "AI Summarizer",
+   "description": "Get the key points of a long document in seconds.",
+   "category": "intelligence",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": 1,
+   "premium": true,
+   "browser_capable": false,
+   "produces_pdf": false,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "length": {
+      "default": "medium",
+      "enum": [
+       "short",
+       "medium",
+       "detailed"
+      ],
+      "title": "Length",
+      "type": "string"
+     },
+     "language": {
+      "default": "English",
+      "description": "Language of the summary",
+      "maxLength": 40,
+      "title": "Language",
+      "type": "string"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "ai_translate",
+   "name": "Translate PDF",
+   "description": "Translate a document's text into another language, keeping its headings.",
+   "category": "intelligence",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": 1,
+   "premium": true,
+   "browser_capable": false,
+   "produces_pdf": false,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "target_language": {
+      "maxLength": 40,
+      "minLength": 2,
+      "title": "Target Language",
+      "type": "string"
+     }
+    },
+    "required": [
+     "target_language"
+    ],
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "ai_chat",
+   "name": "Chat with PDF",
+   "description": "Ask questions and get answers that cite the page they came from.",
+   "category": "intelligence",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": 1,
+   "premium": true,
+   "browser_capable": false,
+   "produces_pdf": false,
+   "options_schema": {
+    "$defs": {
+     "ChatTurn": {
+      "properties": {
+       "role": {
+        "enum": [
+         "user",
+         "assistant"
+        ],
+        "title": "Role",
+        "type": "string"
+       },
+       "content": {
+        "maxLength": 8000,
+        "title": "Content",
+        "type": "string"
+       }
+      },
+      "required": [
+       "role",
+       "content"
+      ],
+      "title": "ChatTurn",
+      "type": "object"
+     }
+    },
+    "additionalProperties": false,
+    "properties": {
+     "question": {
+      "maxLength": 4000,
+      "minLength": 1,
+      "title": "Question",
+      "type": "string"
+     },
+     "history": {
+      "items": {
+       "$ref": "#/$defs/ChatTurn"
+      },
+      "maxItems": 20,
+      "title": "History",
+      "type": "array"
+     }
+    },
+    "required": [
+     "question"
+    ],
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "compress",
+   "name": "Compress PDF",
+   "description": "Shrink file size while keeping the best quality for the level you choose.",
+   "category": "optimize",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "level": {
+      "default": "recommended",
+      "description": "Low keeps the most quality, extreme gives the smallest file",
+      "enum": [
+       "low",
+       "recommended",
+       "extreme"
+      ],
+      "title": "Level",
+      "type": "string"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "repair",
+   "name": "Repair PDF",
+   "description": "Recover damaged or corrupt PDFs.",
+   "category": "optimize",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "title": "NoOptions",
+    "type": "object"
+   }
+  },
+  {
+   "id": "grayscale",
+   "name": "Grayscale PDF",
+   "description": "Convert colours to shades of gray to save ink.",
+   "category": "optimize",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "title": "NoOptions",
+    "type": "object"
+   }
+  },
+  {
+   "id": "ocr",
+   "name": "OCR PDF",
+   "description": "Make scanned PDFs searchable and selectable.",
+   "category": "optimize",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": true,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "languages": {
+      "default": [
+       "eng"
+      ],
+      "description": "Document languages (Tesseract codes)",
+      "items": {
+       "type": "string"
+      },
+      "minItems": 1,
+      "title": "Languages",
+      "type": "array"
+     },
+     "deskew": {
+      "default": true,
+      "description": "Straighten crooked scans",
+      "title": "Deskew",
+      "type": "boolean"
+     },
+     "rotate_pages": {
+      "default": true,
+      "description": "Fix sideways pages automatically",
+      "title": "Rotate Pages",
+      "type": "boolean"
+     },
+     "mode": {
+      "default": "skip_text",
+      "description": "skip_text leaves pages that already have text alone",
+      "enum": [
+       "skip_text",
+       "force",
+       "redo"
+      ],
+      "title": "Mode",
+      "type": "string"
+     },
+     "output": {
+      "default": "pdf",
+      "enum": [
+       "pdf",
+       "pdfa"
+      ],
+      "title": "Output",
+      "type": "string"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "deskew",
+   "name": "Deskew PDF",
+   "description": "Straighten scanned pages that were fed in at an angle.",
+   "category": "optimize",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": true,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "title": "NoOptions",
+    "type": "object"
+   }
+  },
+  {
+   "id": "protect",
+   "name": "Protect PDF",
+   "description": "Encrypt with a password (AES-256) and control printing, copying and editing.",
+   "category": "security",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "password": {
+      "description": "Password to open the file",
+      "maxLength": 127,
+      "minLength": 1,
+      "title": "Password",
+      "type": "string"
+     },
+     "owner_password": {
+      "anyOf": [
+       {
+        "maxLength": 127,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Separate password for changing permissions",
+      "title": "Owner Password"
+     },
+     "allow_print": {
+      "default": true,
+      "title": "Allow Print",
+      "type": "boolean"
+     },
+     "allow_copy": {
+      "default": true,
+      "title": "Allow Copy",
+      "type": "boolean"
+     },
+     "allow_modify": {
+      "default": false,
+      "title": "Allow Modify",
+      "type": "boolean"
+     },
+     "allow_annotate": {
+      "default": true,
+      "title": "Allow Annotate",
+      "type": "boolean"
+     },
+     "allow_fill_forms": {
+      "default": true,
+      "title": "Allow Fill Forms",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "password"
+    ],
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "unlock",
+   "name": "Unlock PDF",
+   "description": "Remove the password and restrictions from a PDF you have the right to open.",
+   "category": "security",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "password": {
+      "default": "",
+      "description": "Needed only if the file asks for one to open",
+      "maxLength": 127,
+      "title": "Password",
+      "type": "string"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "compare",
+   "name": "Compare PDF",
+   "description": "See every text change between two versions, side by side.",
+   "category": "security",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 2,
+   "max_files": 2,
+   "premium": true,
+   "browser_capable": false,
+   "produces_pdf": false,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "ignore_whitespace": {
+      "default": true,
+      "title": "Ignore Whitespace",
+      "type": "boolean"
+     },
+     "ignore_case": {
+      "default": false,
+      "title": "Ignore Case",
+      "type": "boolean"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "redact",
+   "name": "Redact PDF",
+   "description": "Permanently remove sensitive text and areas, not just cover them.",
+   "category": "security",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": true,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "$defs": {
+     "RedactArea": {
+      "description": "A box to black out, as fractions of the visible page (0,0 = top-left, as on screen).",
+      "properties": {
+       "page": {
+        "minimum": 1,
+        "title": "Page",
+        "type": "integer"
+       },
+       "x": {
+        "maximum": 1,
+        "minimum": 0,
+        "title": "X",
+        "type": "number"
+       },
+       "y": {
+        "maximum": 1,
+        "minimum": 0,
+        "title": "Y",
+        "type": "number"
+       },
+       "width": {
+        "exclusiveMinimum": 0,
+        "maximum": 1,
+        "title": "Width",
+        "type": "number"
+       },
+       "height": {
+        "exclusiveMinimum": 0,
+        "maximum": 1,
+        "title": "Height",
+        "type": "number"
+       }
+      },
+      "required": [
+       "page",
+       "x",
+       "y",
+       "width",
+       "height"
+      ],
+      "title": "RedactArea",
+      "type": "object"
+     }
+    },
+    "additionalProperties": false,
+    "properties": {
+     "terms": {
+      "description": "Words or phrases to remove everywhere",
+      "items": {
+       "type": "string"
+      },
+      "title": "Terms",
+      "type": "array"
+     },
+     "patterns": {
+      "description": "Common sensitive data to find automatically",
+      "items": {
+       "enum": [
+        "email",
+        "phone",
+        "credit_card",
+        "iban",
+        "ssn"
+       ],
+       "type": "string"
+      },
+      "title": "Patterns",
+      "type": "array"
+     },
+     "areas": {
+      "items": {
+       "$ref": "#/$defs/RedactArea"
+      },
+      "title": "Areas",
+      "type": "array"
+     },
+     "remove_metadata": {
+      "default": true,
+      "title": "Remove Metadata",
+      "type": "boolean"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  }
+ ]
+}

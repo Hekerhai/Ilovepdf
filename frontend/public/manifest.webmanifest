@@ -1,0 +1,17 @@
+{
+  "name": "Folio PDF tools",
+  "short_name": "Folio",
+  "description": "Every PDF tool, private by default.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2840f0",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

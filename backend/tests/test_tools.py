@@ -306,3 +306,15 @@ def test_redact_removes_text(tmp_path):
     )
     body = text(out)
     assert "jane@example.com" not in body and "Heading" not in body and "Contact" in body
+
+
+def test_web_catalog_snapshot_is_current():
+    """The web app ships a snapshot of the catalog; regenerate it with `python -m app.tools.export`."""
+    import json
+
+    from app.tools.export import catalog
+
+    snapshot = Path(__file__).parents[2] / "frontend" / "src" / "lib" / "tools.generated.json"
+    if not snapshot.exists():
+        pytest.skip("frontend not present")
+    assert json.loads(snapshot.read_text()) == json.loads(json.dumps(catalog())), "run: python -m app.tools.export"
