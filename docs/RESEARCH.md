@@ -99,7 +99,7 @@ before launch), so Pro undercuts both. In-browser tools never count against quot
 | API | FastAPI (Python) | MIT |
 | Queue / workers | Redis + RQ | BSD |
 | DB | PostgreSQL + SQLAlchemy | PostgreSQL, MIT |
-| Object storage | MinIO (S3 API) or local disk | AGPL (MinIO server, unmodified) |
+| Object storage | Local disk volume, or any S3 API (AWS S3, R2, B2) | Permissive (MinIO dropped: its public Docker images are no longer available) |
 | PDF core | qpdf/pikepdf, pypdfium2, Ghostscript, OCRmyPDF + Tesseract | Apache/MPL/BSD, AGPL (Ghostscript CLI), MPL |
 | Office/HTML → PDF | Gotenberg (LibreOffice + Chromium) | MIT |
 | Email (dev) | Mailpit | MIT |
@@ -118,7 +118,7 @@ frontend (Next.js PWA) ──/api──▶ api (FastAPI) ──▶ Postgres
       ▼  (pdf-lib, pdf.js)           ▼
    user's device               Redis ──▶ worker(s) ──▶ engines (qpdf, gs, ocrmypdf, gotenberg…)
                                      │                    │
-                                     └──── storage (local / S3 / MinIO) ◀─┘
+                                     └──── storage (local / S3) ◀─┘
                     janitor: deletes expired files every few minutes
 ```
 

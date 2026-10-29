@@ -10,3 +10,4 @@ node_modules/
 .next/
 frontend/out/
 *.tsbuildinfo
+dump.rdb

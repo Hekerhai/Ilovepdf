@@ -268,3 +268,18 @@ def test_delete_files_now(app_env, pdf3):
     job = run(client, "rotate", [pdf3]).json()
     assert client.delete(f"/api/jobs/{job['id']}").status_code == 204
     assert client.get(job["download_url"]).status_code == 404
+
+
+def test_migrations_match_models(tmp_path):
+    """A model change without a migration fails here: run `python -m app.migrations new "..."`."""
+    from alembic.autogenerate import compare_metadata
+    from alembic.migration import MigrationContext
+
+    from app.infra.db import Base, Database
+
+    db = Database(f"sqlite:///{tmp_path / 'm.db'}")
+    db.migrate()
+    db.migrate()  # idempotent
+    with db.engine.connect() as connection:
+        diff = compare_metadata(MigrationContext.configure(connection, opts={"compare_type": True}), Base.metadata)
+    assert diff == []

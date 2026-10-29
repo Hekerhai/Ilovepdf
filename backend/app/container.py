@@ -68,7 +68,7 @@ def build_ai(s: Settings) -> AIProvider:
 def build_container(settings: Settings | None = None) -> Container:
     s = settings or get_settings()
     db = Database(s.database_url)
-    db.create_all()
+    db.migrate()
     storage = build_storage(s)
     queue: JobQueue = InlineJobQueue() if s.queue_mode == "inline" else RQJobQueue(s.redis_url)
     mailer: Mailer = (

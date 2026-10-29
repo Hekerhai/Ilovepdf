@@ -30,7 +30,7 @@ For a public deployment, set `SITE_ADDRESS` to your domain (Caddy fetches HTTPS 
 | `api` | FastAPI: tools, jobs, accounts, billing, teams, workflows, public API |
 | `worker` (x2) | RQ workers that run server-side tools |
 | `janitor` | Deletes expired files and jobs every few minutes (GDPR auto-delete) |
-| `postgres`, `redis`, `minio` | Data, queue, file storage (S3-compatible) |
+| `postgres`, `redis` | Data and job queue. Files sit on a shared volume, or in S3/R2/B2 with `STORAGE_BACKEND=s3` |
 | `gotenberg` | LibreOffice and Chromium for Office and HTML conversions |
 | `mailpit` | Development SMTP inbox; point `SMTP_*` at a real provider in production |
 
@@ -117,6 +117,9 @@ cd backend && pip install -r requirements-dev.txt
 pytest && ruff check .
 QUEUE_MODE=inline uvicorn app.main:app --reload       # no Redis needed in inline mode
 
+# After changing a database model, add a migration (applied automatically on start)
+python -m app.migrations new "describe the change"
+
 # After changing a tool's options, refresh the frontend catalog
 python -m app.tools.export > ../frontend/src/lib/tools.generated.json
 
@@ -128,6 +131,9 @@ npm test && npm run build
 # End-to-end smoke test against a running stack
 node e2e/smoke.mjs http://localhost <fixtures-dir> <screenshots-dir>
 ```
+
+CI (`.github/workflows/ci.yml`) runs lint, the backend and frontend tests, a production build and
+`docker compose build` on every push and pull request. A test fails if a model changes without a migration.
 
 ## Licensing notes
 

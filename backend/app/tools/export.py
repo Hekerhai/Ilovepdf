@@ -1,4 +1,7 @@
-"""Print the tool catalog as JSON for the web app: python -m app.tools.export > ../frontend/src/lib/tools.generated.json"""
+"""Print the tool catalog as JSON for the web app.
+
+Usage: python -m app.tools.export > ../frontend/src/lib/tools.generated.json
+"""
 
 import json
 

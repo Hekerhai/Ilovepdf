@@ -4,6 +4,7 @@ import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
+from pathlib import Path
 
 from sqlalchemy import (
     JSON,
@@ -16,6 +17,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     create_engine,
+    text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, sessionmaker
 
@@ -163,14 +165,32 @@ class Job(Base):
     files_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
+MIGRATION_LOCK = 0x466F6C696F  # "Folio"
+
+
+def alembic_config(connection=None):
+    from alembic.config import Config
+
+    config = Config()
+    config.set_main_option("script_location", str(Path(__file__).resolve().parent.parent / "migrations"))
+    config.attributes["connection"] = connection
+    return config
+
+
 class Database:
     def __init__(self, url: str):
         connect_args = {"check_same_thread": False} if url.startswith("sqlite") else {}
         self.engine = create_engine(url, pool_pre_ping=True, connect_args=connect_args)
         self._sessions = sessionmaker(self.engine, expire_on_commit=False)
 
-    def create_all(self) -> None:
-        Base.metadata.create_all(self.engine)
+    def migrate(self) -> None:
+        """Bring the schema up to date. Safe to call from every process at once: Postgres serialises the runs."""
+        from alembic import command
+
+        with self.engine.begin() as connection:
+            if connection.dialect.name == "postgresql":
+                connection.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": MIGRATION_LOCK})
+            command.upgrade(alembic_config(connection), "head")
 
     @contextmanager
     def session(self) -> Iterator:
