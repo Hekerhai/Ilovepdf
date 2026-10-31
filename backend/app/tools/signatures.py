@@ -7,6 +7,7 @@ later change shows up in every PDF reader.
 import base64
 import datetime as dt
 import io
+import logging
 from pathlib import Path
 from typing import Literal
 
@@ -20,6 +21,9 @@ from app.tools.registry import register
 
 Position = Literal["top-left", "top-right", "bottom-left", "bottom-center", "bottom-right"]
 STAMP_W, STAMP_H = 200.0, 56.0
+
+# pyHanko logs a full traceback whenever a certificate isn't from a trusted authority; the report says so already.
+logging.getLogger("pyhanko.sign.validation").setLevel(logging.CRITICAL)
 
 
 def self_signed_pkcs12(name: str, email: str | None, days: int = 365) -> bytes:

@@ -66,6 +66,7 @@ export type Plan = {
   premium_tools: boolean;
   workflows: boolean;
   team_workspace: boolean;
+  esign_requests_per_month: number | null;
 };
 
 export type User = {

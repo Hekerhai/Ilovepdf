@@ -13,6 +13,7 @@ import { Logo } from "./Logo";
 const NAV = [
   { href: "/#tools", label: "All tools" },
   { href: "/workflows", label: "Workflows" },
+  { href: "/esign", label: "eSign" },
   { href: "/developers", label: "API" },
   { href: "/pricing", label: "Pricing" },
 ];

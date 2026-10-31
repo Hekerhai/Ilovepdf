@@ -102,7 +102,7 @@ export function SignWidget({ file, values, onChange }: { file: File; values: Opt
   );
 }
 
-function SignaturePad({ value, onChange }: { value: string; onChange: (dataUrl: string) => void }) {
+export function SignaturePad({ value, onChange }: { value: string; onChange: (dataUrl: string) => void }) {
   const [mode, setMode] = useState<Mode>("draw");
   const [ink, setInk] = useState(INKS[0]);
   const [typed, setTyped] = useState("");

@@ -14,6 +14,8 @@ from app.container import get_container
 from app.domain.errors import FolioError
 
 log = logging.getLogger(__name__)
+# App loggers (including the development mailer, which prints emails) at INFO; no-op if logging is already set up.
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 
 @asynccontextmanager
