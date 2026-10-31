@@ -14,6 +14,10 @@ export const CUSTOM_FIELDS: Record<string, string[]> = {
   create_bookmarks: ["bookmarks"],
   redact: ["areas"],
   ai_chat: ["question", "history"],
+  edit_pdf: ["objects"],
+  fill_forms: ["fields"],
+  create_forms: ["fields"],
+  digital_sign: ["certificate"],
 };
 
 /** Show a field only when it matters for the other choices. */
@@ -33,6 +37,16 @@ const VISIBLE_WHEN: Record<string, Record<string, (o: OptionValues) => boolean>>
   images_to_pdf: {
     orientation: (o) => (o.page_size ?? "fit") !== "fit",
   },
+  scan_to_pdf: {
+    orientation: (o) => (o.page_size ?? "A4") !== "fit",
+  },
+  digital_sign: {
+    certificate_password: (o) => Boolean(o.certificate),
+    signer_name: (o) => !o.certificate,
+    signer_email: (o) => !o.certificate,
+    page: (o) => o.visible !== false && !o.field_name,
+    position: (o) => o.visible !== false && !o.field_name,
+  },
 };
 
 const LABELS: Record<string, string> = {
@@ -50,6 +64,18 @@ const LABELS: Record<string, string> = {
   url: "Web page URL",
   pdfa: "PDF/A",
   part: "PDF/A part",
+  black_white: "Black & white",
+  signer_name: "Your name",
+  signer_email: "Your email (optional)",
+  certificate_password: "Certificate password",
+  field_name: "Sign an existing field (optional)",
+  timestamp_url: "Timestamp server (optional)",
+  certify: "Certify (lock everything but form filling)",
+  visible: "Show a signature stamp",
+  name_after_match: "Name files after the matching line",
+  regex: "Regular expression",
+  split: "Split",
+  start_at: "Start counting at",
 };
 
 const LANGUAGES: [string, string][] = [

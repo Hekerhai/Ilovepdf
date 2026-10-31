@@ -11,7 +11,9 @@ export class ServerEngine implements ProcessingEngine {
   }
 
   run(toolId: string, files: File[], options: Options, progress: Progress, signal?: AbortSignal) {
-    return this.runSteps([{ tool: toolId, options }], files, progress, signal);
+    // Keys starting with "_" are UI-only state (e.g. a picked file's name) and never reach the API.
+    const sent = Object.fromEntries(Object.entries(options).filter(([k]) => !k.startsWith("_")));
+    return this.runSteps([{ tool: toolId, options: sent }], files, progress, signal);
   }
 
   async runSteps(steps: Step[], files: File[], progress: Progress, signal?: AbortSignal): Promise<ToolResult> {

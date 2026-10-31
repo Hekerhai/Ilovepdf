@@ -182,3 +182,15 @@ def test_new_tools_are_in_the_catalog():
     ids = {t.id for t in default_registry().all()}
     assert {"edit_pdf", "fill_forms", "create_forms", "digital_sign", "verify_signatures"} <= ids
     assert {"split_by_text", "rename", "scan_to_pdf"} <= ids
+
+
+def test_fill_a_form_made_in_the_browser(tmp_path):
+    """pdf-lib names radio states 0, 1... and keeps the labels in /Opt; the server must accept the labels."""
+    from pathlib import Path
+
+    form = Path(__file__).parent / "fixtures" / "pdflib-form-rotated.pdf"  # made by the web app's create_forms
+    assert [f.get("options") for f in describe_fields(form)] == [None, None, ["Free", "Pro"], ["Small", "Large"]]
+    [filled] = run("fill_forms", [form], tmp_path, fields={"size": "Large", "plan": "Pro", "full_name": "Zoë Ω"})
+    with pikepdf.open(filled) as pdf:
+        f = pikepdf.form.Form(pdf)
+        assert (str(f["size"].value), str(f["plan"].value), str(f["full_name"].value)) == ("/1", "Pro", "Zoë Ω")

@@ -182,17 +182,33 @@ class EditPdfTool(Tool):
 
 def describe_fields(path: Path) -> list[dict]:
     """The fillable fields of a PDF, for the API (the web app reads them with pdf-lib instead)."""
+    f = pikepdf.form
+    kinds = {f.TextField: "text", f.CheckboxField: "checkbox", f.ChoiceField: "dropdown", f.RadioButtonGroup: "radio"}
     with open_pdf(path) as pdf:
+        names = [name for name, _ in f.Form(pdf).items()]
+        form = f.Form(pdf)  # listing leaves stale wrappers behind in pikepdf, so look fields up in a fresh Form
         out = []
-        for name, field in pikepdf.form.Form(pdf).items():
-            kind = type(field).__name__.replace("Field", "").replace("Group", "").lower()
-            entry: dict = {"name": name, "type": kind}
-            if isinstance(field, pikepdf.form.ChoiceField):
+        for name in names:
+            field = form[name]
+            entry: dict = {"name": name, "type": kinds.get(type(field), "other")}
+            if isinstance(field, f.ChoiceField):
                 entry["options"] = [str(o.display_value) for o in field.options]
-            if isinstance(field, pikepdf.form.RadioButtonGroup):
-                entry["options"] = [str(o.on_value).lstrip("/") for o in field.options]
+            if isinstance(field, f.RadioButtonGroup):
+                entry["options"] = [label for label, _ in _radio_choices(field)]
             out.append(entry)
         return out
+
+
+def _radio_choices(group) -> list[tuple[str, object]]:
+    """(label, option) pairs. Labels come from /Opt when present (pdf-lib names states 0, 1...), else state names."""
+    labels = group._field.obj.get("/Opt")
+    pairs = []
+    for option in group.options:
+        state = str(option.on_value).lstrip("/")
+        if labels is not None and state.isdigit() and int(state) < len(labels):
+            state = str(labels[int(state)])
+        pairs.append((state, option))
+    return pairs
 
 
 @register
@@ -212,8 +228,9 @@ class FillFormsTool(Tool):
 
     def run(self, inputs: list[Path], options: Options, ctx: ToolContext) -> list[Path]:
         with open_pdf(inputs[0]) as pdf:
+            # Listing leaves stale wrappers behind in pikepdf, so list with one Form and fill through a fresh one.
+            names = {name for name, _ in pikepdf.form.Form(pdf).items()}
             form = _form(pdf)
-            names = {name for name, _ in form.items()}
             if not names:
                 raise ValidationFailed("This PDF has no fillable fields. Use Create forms to add some.")
             unknown = sorted(set(options.fields) - names)
@@ -263,7 +280,7 @@ def _set_field(field, value: str | bool) -> None:
         if isinstance(target, f.CheckboxField):
             target.checked = value is True or str(value).lower() in ("true", "yes", "on", "1")
         elif isinstance(target, f.RadioButtonGroup):
-            match = [o for o in target.options if str(o.on_value).lstrip("/") == str(value)]
+            match = [option for label, option in _radio_choices(target) if label == str(value)]
             if not match:
                 raise ValidationFailed(f"'{value}' is not one of the choices for this field.")
             match[0].select()

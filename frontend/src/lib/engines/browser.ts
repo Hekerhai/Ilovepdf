@@ -1,17 +1,40 @@
 import { zipSync } from "fflate";
 
 import { stem } from "../format";
+import { isWinAnsi } from "./geometry";
 import type { ToolResult } from "../types";
 import type { Options, ProcessingEngine, Progress } from "./types";
 
 /** Tools with an in-browser implementation in ./browser-handlers. */
-const BROWSER_TOOLS = new Set(["merge", "split", "remove_pages", "extract_pages", "rotate", "organize", "images_to_pdf", "pdf_to_images"]);
+const BROWSER_TOOLS = new Set([
+  "merge",
+  "split",
+  "remove_pages",
+  "extract_pages",
+  "rotate",
+  "organize",
+  "images_to_pdf",
+  "pdf_to_images",
+  "edit_pdf",
+  "fill_forms",
+  "create_forms",
+  "scan_to_pdf",
+]);
+
+const NEEDS_UNICODE = "Text in this alphabet is drawn on our servers, which have the fonts for it.";
 
 /** Options the browser implementation can't honour; those runs go to the server instead. */
 function browserLimitations(toolId: string, o: Options): string | null {
   if (toolId === "merge" && o.add_bookmarks) return "Adding bookmarks runs on our servers.";
   if (toolId === "split" && (o.mode === "size" || o.mode === "bookmarks")) return "Splitting by size or bookmarks runs on our servers.";
-  if (toolId === "images_to_pdf" && typeof createImageBitmap === "undefined") return "Your browser can't convert these images.";
+  if ((toolId === "images_to_pdf" || toolId === "scan_to_pdf") && typeof createImageBitmap === "undefined") return "Your browser can't convert these images.";
+  if (toolId === "edit_pdf" && ((o.objects as { text?: string }[]) ?? []).some((obj) => obj.text && !isWinAnsi(obj.text))) return NEEDS_UNICODE;
+  if (toolId === "fill_forms" && Object.values((o.fields as Record<string, unknown>) ?? {}).some((v) => typeof v === "string" && !isWinAnsi(v))) return NEEDS_UNICODE;
+  if (toolId === "create_forms") {
+    const fields = (o.fields as { type: string; default?: string; options?: string[] }[]) ?? [];
+    if (fields.some((f) => f.type === "signature")) return "Signature fields are added on our servers.";
+    if (fields.some((f) => !isWinAnsi([f.default ?? "", ...(f.options ?? [])].join("")))) return NEEDS_UNICODE;
+  }
   return null;
 }
 

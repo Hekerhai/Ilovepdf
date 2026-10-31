@@ -16,7 +16,7 @@ import { defaultOptions, OptionsForm } from "./OptionsForm";
 import { ToolIcon } from "./ToolCard";
 
 /** Tools that need a visual editor can't be configured blind inside a workflow. */
-const INTERACTIVE = new Set(["sign", "organize", "create_bookmarks", "ai_chat", "html_to_pdf"]);
+const INTERACTIVE = new Set(["sign", "organize", "create_bookmarks", "ai_chat", "html_to_pdf", "edit_pdf", "fill_forms", "create_forms"]);
 
 const TEMPLATES: { name: string; steps: Step[] }[] = [
   { name: "Scan cleanup", steps: [{ tool: "ocr", options: {} }, { tool: "compress", options: { level: "recommended" } }] },

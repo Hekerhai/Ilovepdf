@@ -18,14 +18,25 @@ import { Dropzone } from "./Dropzone";
 import { FileList } from "./FileList";
 import { defaultOptions, OptionsForm, type OptionValues } from "./OptionsForm";
 import { ToolIcon } from "./ToolCard";
+import { FormBuilder } from "./widgets/FormBuilder";
+import { FormFiller } from "./widgets/FormFiller";
 import { PageOrganizer } from "./widgets/PageOrganizer";
+import { PdfEditor } from "./widgets/PdfEditor";
 import { SignWidget } from "./widgets/SignWidget";
-import { BookmarksEditor, ImagePicker } from "./widgets/SmallWidgets";
+import { BookmarksEditor, CertificatePicker, ImagePicker } from "./widgets/SmallWidgets";
 
 type Status = { phase: "idle" } | { phase: "running"; message: string; fraction: number } | { phase: "done"; result: ToolResult } | { phase: "error"; message: string; code?: string };
 
 const ORDERED_TOOLS = new Set(["merge", "images_to_pdf", "alternate_mix", "compare", "organize", "bates"]);
-const NEXT_STEPS = ["compress", "protect", "watermark", "page_numbers", "sign", "split", "organize", "ocr", "pdf_to_word"];
+const NEXT_STEPS = ["edit_pdf", "compress", "protect", "watermark", "page_numbers", "sign", "split", "organize", "ocr", "pdf_to_word"];
+
+/** Tools whose main input comes from an on-page widget; the run button waits until there is something to apply. */
+function hasWidgetInput(toolId: string, values: OptionValues): boolean {
+  if (toolId === "edit_pdf") return ((values.objects as unknown[]) ?? []).length > 0;
+  if (toolId === "create_forms") return ((values.fields as unknown[]) ?? []).length > 0;
+  if (toolId === "fill_forms") return Object.keys((values.fields as object) ?? {}).length > 0;
+  return true;
+}
 
 export function ToolWorkspace({ tool }: { tool: ToolInfo }) {
   const { plan, user, config, refresh } = useSession();
@@ -45,7 +56,7 @@ export function ToolWorkspace({ tool }: { tool: ToolInfo }) {
   const { engine, browserBlocker } = useMemo(() => chooseEngine(tool.id, values, privateMode), [tool.id, values, privateMode]);
   const locked = tool.premium && plan !== null && !plan.premium_tools;
   const aiMissing = tool.category === "intelligence" && config !== null && !config.ai_available;
-  const ready = (files.length >= tool.min_files || (!needsFiles && Boolean(values.url))) && status.phase !== "running";
+  const ready = (files.length >= tool.min_files || (!needsFiles && Boolean(values.url))) && hasWidgetInput(tool.id, values) && status.phase !== "running";
 
   async function run() {
     setStatus({ phase: "running", message: "Starting…", fraction: 0.02 });
@@ -120,7 +131,7 @@ export function ToolWorkspace({ tool }: { tool: ToolInfo }) {
       ) : (
         <div className="mx-auto mt-8 max-w-5xl">
           {needsFiles && !files.length ? (
-            <Dropzone accept={tool.accepts} multiple={multiple} onFiles={setFiles} allowCamera={tool.id === "images_to_pdf"} />
+            <Dropzone accept={tool.accepts} multiple={multiple} onFiles={setFiles} allowCamera={tool.id === "images_to_pdf" || tool.id === "scan_to_pdf"} />
           ) : (
             <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
               <div className="space-y-4">
@@ -128,6 +139,12 @@ export function ToolWorkspace({ tool }: { tool: ToolInfo }) {
                   <PageOrganizer files={files} values={values} onChange={setValues} />
                 ) : tool.id === "sign" && files[0] ? (
                   <SignWidget file={files[0]} values={values} onChange={setValues} />
+                ) : tool.id === "edit_pdf" && files[0] ? (
+                  <PdfEditor file={files[0]} values={values} onChange={setValues} />
+                ) : tool.id === "create_forms" && files[0] ? (
+                  <FormBuilder file={files[0]} values={values} onChange={setValues} />
+                ) : tool.id === "fill_forms" && files[0] ? (
+                  <FormFiller file={files[0]} values={values} onChange={setValues} />
                 ) : (
                   <FileList files={files} onChange={setFiles} ordered={ORDERED_TOOLS.has(tool.id)} />
                 )}
@@ -139,6 +156,7 @@ export function ToolWorkspace({ tool }: { tool: ToolInfo }) {
                 <h2 className="font-semibold">Options</h2>
                 {tool.id === "watermark" && <ImagePicker values={values} onChange={setValues} />}
                 {tool.id === "create_bookmarks" && <BookmarksEditor values={values} onChange={setValues} />}
+                {tool.id === "digital_sign" && <CertificatePicker values={values} onChange={setValues} />}
                 <OptionsForm tool={tool} values={values} onChange={setValues} />
                 {tool.browser_capable && (
                   <div className="rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-800/60">

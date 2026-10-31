@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Trash2 } from "lucide-react";
+import { BadgeCheck, Plus, Trash2 } from "lucide-react";
 
 import type { OptionValues } from "../OptionsForm";
 
@@ -63,6 +63,45 @@ export function BookmarksEditor({ values, onChange }: { values: OptionValues; on
       <button className="btn-secondary mt-2 px-3 py-1.5" onClick={() => set([...marks, { title: "", page: (marks.at(-1)?.page ?? 0) + 1, level: 0 }])}>
         <Plus className="h-4 w-4" /> Add bookmark
       </button>
+    </div>
+  );
+}
+
+/** Certificate file (.p12 / .pfx) for digital signatures, kept as a data URL. Leaving it empty creates one. */
+export function CertificatePicker({ values, onChange }: { values: OptionValues; onChange: (v: OptionValues) => void }) {
+  const cert = values.certificate as string | null | undefined;
+  const name = values._certificate_name as string | undefined;
+  return (
+    <div>
+      <span className="label">Certificate</span>
+      {cert ? (
+        <div className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 p-2 text-sm dark:border-slate-700">
+          <span className="flex min-w-0 items-center gap-2">
+            <BadgeCheck className="h-4 w-4 shrink-0 text-emerald-600" />
+            <span className="truncate">{name ?? "Certificate loaded"}</span>
+          </span>
+          <button className="btn-ghost px-2 py-1" onClick={() => onChange({ ...values, certificate: null, certificate_password: null, _certificate_name: undefined })}>
+            <Trash2 className="h-4 w-4" /> Remove
+          </button>
+        </div>
+      ) : (
+        <>
+          <input
+            type="file"
+            accept=".p12,.pfx,application/x-pkcs12"
+            className="input"
+            aria-label="Certificate file"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (!f) return;
+              const reader = new FileReader();
+              reader.onload = () => onChange({ ...values, certificate: String(reader.result), _certificate_name: f.name });
+              reader.readAsDataURL(f);
+            }}
+          />
+          <p className="help">Use your own .p12 or .pfx file, or leave this empty and we&apos;ll make a personal certificate for you.</p>
+        </>
+      )}
     </div>
   );
 }
