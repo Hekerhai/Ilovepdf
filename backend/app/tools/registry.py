@@ -9,11 +9,13 @@ from app.tools.base import Tool
 class ToolRegistry:
     def __init__(self) -> None:
         self._tools: dict[str, Tool] = {}
+        self._order: dict[str, int] = {}
 
     def add(self, tool: Tool) -> None:
         if tool.id in self._tools:
             raise ValueError(f"Duplicate tool id: {tool.id}")
         self._tools[tool.id] = tool
+        self._order[tool.id] = len(self._order)
 
     def get(self, tool_id: str) -> Tool:
         try:
@@ -22,11 +24,20 @@ class ToolRegistry:
             raise NotFound(f"Unknown tool '{tool_id}'") from None
 
     def all(self) -> Iterable[Tool]:
-        return self._tools.values()
+        # Stable order (module order below, then definition order) whatever order modules were imported in.
+        def key(tool: Tool) -> tuple[int, int]:
+            module = type(tool).__module__.rsplit(".", 1)[-1]
+            rank = MODULE_ORDER.index(module) if module in MODULE_ORDER else len(MODULE_ORDER)
+            return rank, self._order[tool.id]
+
+        return sorted(self._tools.values(), key=key)
 
     def __contains__(self, tool_id: str) -> bool:
         return tool_id in self._tools
 
+
+MODULE_ORDER = ["organize", "optimize", "convert_to", "convert_from", "edit", "editor", "security", "signatures",
+                "intelligence"]  # fmt: skip
 
 _default = ToolRegistry()
 

@@ -31,235 +31,6 @@
  ],
  "tools": [
   {
-   "id": "pdf_to_images",
-   "name": "PDF to JPG",
-   "description": "Turn each page into a JPG or PNG image.",
-   "category": "convert_from_pdf",
-   "accepts": [
-    ".pdf"
-   ],
-   "min_files": 1,
-   "max_files": null,
-   "premium": false,
-   "browser_capable": true,
-   "produces_pdf": false,
-   "options_schema": {
-    "additionalProperties": false,
-    "properties": {
-     "format": {
-      "default": "jpg",
-      "enum": [
-       "jpg",
-       "png"
-      ],
-      "title": "Format",
-      "type": "string"
-     },
-     "dpi": {
-      "default": 150,
-      "description": "Image resolution",
-      "maximum": 600,
-      "minimum": 36,
-      "title": "Dpi",
-      "type": "integer"
-     },
-     "quality": {
-      "default": 90,
-      "description": "JPG quality",
-      "maximum": 100,
-      "minimum": 30,
-      "title": "Quality",
-      "type": "integer"
-     },
-     "pages": {
-      "default": "all",
-      "title": "Pages",
-      "type": "string"
-     }
-    },
-    "title": "Options",
-    "type": "object"
-   }
-  },
-  {
-   "id": "pdf_to_word",
-   "name": "PDF to Word",
-   "description": "Convert PDFs into editable DOCX documents.",
-   "category": "convert_from_pdf",
-   "accepts": [
-    ".pdf"
-   ],
-   "min_files": 1,
-   "max_files": null,
-   "premium": true,
-   "browser_capable": false,
-   "produces_pdf": false,
-   "options_schema": {
-    "additionalProperties": false,
-    "properties": {},
-    "title": "NoOptions",
-    "type": "object"
-   }
-  },
-  {
-   "id": "pdf_to_powerpoint",
-   "name": "PDF to PowerPoint",
-   "description": "Turn each page into a slide in a PPTX deck.",
-   "category": "convert_from_pdf",
-   "accepts": [
-    ".pdf"
-   ],
-   "min_files": 1,
-   "max_files": null,
-   "premium": true,
-   "browser_capable": false,
-   "produces_pdf": false,
-   "options_schema": {
-    "additionalProperties": false,
-    "properties": {},
-    "title": "NoOptions",
-    "type": "object"
-   }
-  },
-  {
-   "id": "pdf_to_excel",
-   "name": "PDF to Excel",
-   "description": "Pull tables out of PDFs into an XLSX spreadsheet.",
-   "category": "convert_from_pdf",
-   "accepts": [
-    ".pdf"
-   ],
-   "min_files": 1,
-   "max_files": null,
-   "premium": true,
-   "browser_capable": false,
-   "produces_pdf": false,
-   "options_schema": {
-    "additionalProperties": false,
-    "properties": {
-     "sheet_per": {
-      "default": "page",
-      "description": "One sheet per page or per table",
-      "enum": [
-       "page",
-       "table"
-      ],
-      "title": "Sheet Per",
-      "type": "string"
-     }
-    },
-    "title": "Options",
-    "type": "object"
-   }
-  },
-  {
-   "id": "pdf_to_text",
-   "name": "PDF to Text",
-   "description": "Extract all text into a plain .txt file.",
-   "category": "convert_from_pdf",
-   "accepts": [
-    ".pdf"
-   ],
-   "min_files": 1,
-   "max_files": null,
-   "premium": false,
-   "browser_capable": false,
-   "produces_pdf": false,
-   "options_schema": {
-    "additionalProperties": false,
-    "properties": {
-     "keep_layout": {
-      "default": false,
-      "description": "Keep the visual layout with spaces",
-      "title": "Keep Layout",
-      "type": "boolean"
-     }
-    },
-    "title": "Options",
-    "type": "object"
-   }
-  },
-  {
-   "id": "pdf_to_markdown",
-   "name": "PDF to Markdown",
-   "description": "Extract text with headings as Markdown, ready for docs or AI tools.",
-   "category": "convert_from_pdf",
-   "accepts": [
-    ".pdf"
-   ],
-   "min_files": 1,
-   "max_files": null,
-   "premium": false,
-   "browser_capable": false,
-   "produces_pdf": false,
-   "options_schema": {
-    "additionalProperties": false,
-    "properties": {},
-    "title": "NoOptions",
-    "type": "object"
-   }
-  },
-  {
-   "id": "pdf_to_pdfa",
-   "name": "PDF to PDF/A",
-   "description": "Convert to PDF/A for long-term archiving.",
-   "category": "convert_from_pdf",
-   "accepts": [
-    ".pdf"
-   ],
-   "min_files": 1,
-   "max_files": null,
-   "premium": true,
-   "browser_capable": false,
-   "produces_pdf": true,
-   "options_schema": {
-    "additionalProperties": false,
-    "properties": {
-     "part": {
-      "default": 2,
-      "description": "PDF/A conformance part (2 is the common choice)",
-      "enum": [
-       1,
-       2,
-       3
-      ],
-      "title": "Part",
-      "type": "integer"
-     }
-    },
-    "title": "Options",
-    "type": "object"
-   }
-  },
-  {
-   "id": "extract_images",
-   "name": "Extract images",
-   "description": "Save every embedded image at its original quality.",
-   "category": "convert_from_pdf",
-   "accepts": [
-    ".pdf"
-   ],
-   "min_files": 1,
-   "max_files": null,
-   "premium": false,
-   "browser_capable": false,
-   "produces_pdf": false,
-   "options_schema": {
-    "additionalProperties": false,
-    "properties": {
-     "min_size_px": {
-      "default": 32,
-      "description": "Skip images smaller than this (icons, lines)",
-      "minimum": 1,
-      "title": "Min Size Px",
-      "type": "integer"
-     }
-    },
-    "title": "Options",
-    "type": "object"
-   }
-  },
-  {
    "id": "merge",
    "name": "Merge PDF",
    "description": "Combine several PDFs into one, in the order you choose.",
@@ -806,6 +577,163 @@
    }
   },
   {
+   "id": "compress",
+   "name": "Compress PDF",
+   "description": "Shrink file size while keeping the best quality for the level you choose.",
+   "category": "optimize",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "level": {
+      "default": "recommended",
+      "description": "Low keeps the most quality, extreme gives the smallest file",
+      "enum": [
+       "low",
+       "recommended",
+       "extreme"
+      ],
+      "title": "Level",
+      "type": "string"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "repair",
+   "name": "Repair PDF",
+   "description": "Recover damaged or corrupt PDFs.",
+   "category": "optimize",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "title": "NoOptions",
+    "type": "object"
+   }
+  },
+  {
+   "id": "grayscale",
+   "name": "Grayscale PDF",
+   "description": "Convert colours to shades of gray to save ink.",
+   "category": "optimize",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "title": "NoOptions",
+    "type": "object"
+   }
+  },
+  {
+   "id": "ocr",
+   "name": "OCR PDF",
+   "description": "Make scanned PDFs searchable and selectable.",
+   "category": "optimize",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": true,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "languages": {
+      "default": [
+       "eng"
+      ],
+      "description": "Document languages (Tesseract codes)",
+      "items": {
+       "type": "string"
+      },
+      "minItems": 1,
+      "title": "Languages",
+      "type": "array"
+     },
+     "deskew": {
+      "default": true,
+      "description": "Straighten crooked scans",
+      "title": "Deskew",
+      "type": "boolean"
+     },
+     "rotate_pages": {
+      "default": true,
+      "description": "Fix sideways pages automatically",
+      "title": "Rotate Pages",
+      "type": "boolean"
+     },
+     "mode": {
+      "default": "skip_text",
+      "description": "skip_text leaves pages that already have text alone",
+      "enum": [
+       "skip_text",
+       "force",
+       "redo"
+      ],
+      "title": "Mode",
+      "type": "string"
+     },
+     "output": {
+      "default": "pdf",
+      "enum": [
+       "pdf",
+       "pdfa"
+      ],
+      "title": "Output",
+      "type": "string"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "deskew",
+   "name": "Deskew PDF",
+   "description": "Straighten scanned pages that were fed in at an angle.",
+   "category": "optimize",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": true,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "title": "NoOptions",
+    "type": "object"
+   }
+  },
+  {
    "id": "images_to_pdf",
    "name": "JPG to PDF",
    "description": "Turn photos and scans (JPG, PNG, WebP, TIFF...) into a PDF.",
@@ -1041,6 +969,235 @@
       "default": null,
       "description": "A public web address, used when no file is uploaded",
       "title": "Url"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "pdf_to_images",
+   "name": "PDF to JPG",
+   "description": "Turn each page into a JPG or PNG image.",
+   "category": "convert_from_pdf",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": true,
+   "produces_pdf": false,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "format": {
+      "default": "jpg",
+      "enum": [
+       "jpg",
+       "png"
+      ],
+      "title": "Format",
+      "type": "string"
+     },
+     "dpi": {
+      "default": 150,
+      "description": "Image resolution",
+      "maximum": 600,
+      "minimum": 36,
+      "title": "Dpi",
+      "type": "integer"
+     },
+     "quality": {
+      "default": 90,
+      "description": "JPG quality",
+      "maximum": 100,
+      "minimum": 30,
+      "title": "Quality",
+      "type": "integer"
+     },
+     "pages": {
+      "default": "all",
+      "title": "Pages",
+      "type": "string"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "pdf_to_word",
+   "name": "PDF to Word",
+   "description": "Convert PDFs into editable DOCX documents.",
+   "category": "convert_from_pdf",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": true,
+   "browser_capable": false,
+   "produces_pdf": false,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "title": "NoOptions",
+    "type": "object"
+   }
+  },
+  {
+   "id": "pdf_to_powerpoint",
+   "name": "PDF to PowerPoint",
+   "description": "Turn each page into a slide in a PPTX deck.",
+   "category": "convert_from_pdf",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": true,
+   "browser_capable": false,
+   "produces_pdf": false,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "title": "NoOptions",
+    "type": "object"
+   }
+  },
+  {
+   "id": "pdf_to_excel",
+   "name": "PDF to Excel",
+   "description": "Pull tables out of PDFs into an XLSX spreadsheet.",
+   "category": "convert_from_pdf",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": true,
+   "browser_capable": false,
+   "produces_pdf": false,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "sheet_per": {
+      "default": "page",
+      "description": "One sheet per page or per table",
+      "enum": [
+       "page",
+       "table"
+      ],
+      "title": "Sheet Per",
+      "type": "string"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "pdf_to_text",
+   "name": "PDF to Text",
+   "description": "Extract all text into a plain .txt file.",
+   "category": "convert_from_pdf",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": false,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "keep_layout": {
+      "default": false,
+      "description": "Keep the visual layout with spaces",
+      "title": "Keep Layout",
+      "type": "boolean"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "pdf_to_markdown",
+   "name": "PDF to Markdown",
+   "description": "Extract text with headings as Markdown, ready for docs or AI tools.",
+   "category": "convert_from_pdf",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": false,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "title": "NoOptions",
+    "type": "object"
+   }
+  },
+  {
+   "id": "pdf_to_pdfa",
+   "name": "PDF to PDF/A",
+   "description": "Convert to PDF/A for long-term archiving.",
+   "category": "convert_from_pdf",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": true,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "part": {
+      "default": 2,
+      "description": "PDF/A conformance part (2 is the common choice)",
+      "enum": [
+       1,
+       2,
+       3
+      ],
+      "title": "Part",
+      "type": "integer"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "extract_images",
+   "name": "Extract images",
+   "description": "Save every embedded image at its original quality.",
+   "category": "convert_from_pdf",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": false,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "min_size_px": {
+      "default": 32,
+      "description": "Skip images smaller than this (icons, lines)",
+      "minimum": 1,
+      "title": "Min Size Px",
+      "type": "integer"
      }
     },
     "title": "Options",
@@ -2143,294 +2300,6 @@
    }
   },
   {
-   "id": "ai_summarize",
-   "name": "AI Summarizer",
-   "description": "Get the key points of a long document in seconds.",
-   "category": "intelligence",
-   "accepts": [
-    ".pdf"
-   ],
-   "min_files": 1,
-   "max_files": 1,
-   "premium": true,
-   "browser_capable": false,
-   "produces_pdf": false,
-   "options_schema": {
-    "additionalProperties": false,
-    "properties": {
-     "length": {
-      "default": "medium",
-      "enum": [
-       "short",
-       "medium",
-       "detailed"
-      ],
-      "title": "Length",
-      "type": "string"
-     },
-     "language": {
-      "default": "English",
-      "description": "Language of the summary",
-      "maxLength": 40,
-      "title": "Language",
-      "type": "string"
-     }
-    },
-    "title": "Options",
-    "type": "object"
-   }
-  },
-  {
-   "id": "ai_translate",
-   "name": "Translate PDF",
-   "description": "Translate a document's text into another language, keeping its headings.",
-   "category": "intelligence",
-   "accepts": [
-    ".pdf"
-   ],
-   "min_files": 1,
-   "max_files": 1,
-   "premium": true,
-   "browser_capable": false,
-   "produces_pdf": false,
-   "options_schema": {
-    "additionalProperties": false,
-    "properties": {
-     "target_language": {
-      "maxLength": 40,
-      "minLength": 2,
-      "title": "Target Language",
-      "type": "string"
-     }
-    },
-    "required": [
-     "target_language"
-    ],
-    "title": "Options",
-    "type": "object"
-   }
-  },
-  {
-   "id": "ai_chat",
-   "name": "Chat with PDF",
-   "description": "Ask questions and get answers that cite the page they came from.",
-   "category": "intelligence",
-   "accepts": [
-    ".pdf"
-   ],
-   "min_files": 1,
-   "max_files": 1,
-   "premium": true,
-   "browser_capable": false,
-   "produces_pdf": false,
-   "options_schema": {
-    "$defs": {
-     "ChatTurn": {
-      "properties": {
-       "role": {
-        "enum": [
-         "user",
-         "assistant"
-        ],
-        "title": "Role",
-        "type": "string"
-       },
-       "content": {
-        "maxLength": 8000,
-        "title": "Content",
-        "type": "string"
-       }
-      },
-      "required": [
-       "role",
-       "content"
-      ],
-      "title": "ChatTurn",
-      "type": "object"
-     }
-    },
-    "additionalProperties": false,
-    "properties": {
-     "question": {
-      "maxLength": 4000,
-      "minLength": 1,
-      "title": "Question",
-      "type": "string"
-     },
-     "history": {
-      "items": {
-       "$ref": "#/$defs/ChatTurn"
-      },
-      "maxItems": 20,
-      "title": "History",
-      "type": "array"
-     }
-    },
-    "required": [
-     "question"
-    ],
-    "title": "Options",
-    "type": "object"
-   }
-  },
-  {
-   "id": "compress",
-   "name": "Compress PDF",
-   "description": "Shrink file size while keeping the best quality for the level you choose.",
-   "category": "optimize",
-   "accepts": [
-    ".pdf"
-   ],
-   "min_files": 1,
-   "max_files": null,
-   "premium": false,
-   "browser_capable": false,
-   "produces_pdf": true,
-   "options_schema": {
-    "additionalProperties": false,
-    "properties": {
-     "level": {
-      "default": "recommended",
-      "description": "Low keeps the most quality, extreme gives the smallest file",
-      "enum": [
-       "low",
-       "recommended",
-       "extreme"
-      ],
-      "title": "Level",
-      "type": "string"
-     }
-    },
-    "title": "Options",
-    "type": "object"
-   }
-  },
-  {
-   "id": "repair",
-   "name": "Repair PDF",
-   "description": "Recover damaged or corrupt PDFs.",
-   "category": "optimize",
-   "accepts": [
-    ".pdf"
-   ],
-   "min_files": 1,
-   "max_files": null,
-   "premium": false,
-   "browser_capable": false,
-   "produces_pdf": true,
-   "options_schema": {
-    "additionalProperties": false,
-    "properties": {},
-    "title": "NoOptions",
-    "type": "object"
-   }
-  },
-  {
-   "id": "grayscale",
-   "name": "Grayscale PDF",
-   "description": "Convert colours to shades of gray to save ink.",
-   "category": "optimize",
-   "accepts": [
-    ".pdf"
-   ],
-   "min_files": 1,
-   "max_files": null,
-   "premium": false,
-   "browser_capable": false,
-   "produces_pdf": true,
-   "options_schema": {
-    "additionalProperties": false,
-    "properties": {},
-    "title": "NoOptions",
-    "type": "object"
-   }
-  },
-  {
-   "id": "ocr",
-   "name": "OCR PDF",
-   "description": "Make scanned PDFs searchable and selectable.",
-   "category": "optimize",
-   "accepts": [
-    ".pdf"
-   ],
-   "min_files": 1,
-   "max_files": null,
-   "premium": true,
-   "browser_capable": false,
-   "produces_pdf": true,
-   "options_schema": {
-    "additionalProperties": false,
-    "properties": {
-     "languages": {
-      "default": [
-       "eng"
-      ],
-      "description": "Document languages (Tesseract codes)",
-      "items": {
-       "type": "string"
-      },
-      "minItems": 1,
-      "title": "Languages",
-      "type": "array"
-     },
-     "deskew": {
-      "default": true,
-      "description": "Straighten crooked scans",
-      "title": "Deskew",
-      "type": "boolean"
-     },
-     "rotate_pages": {
-      "default": true,
-      "description": "Fix sideways pages automatically",
-      "title": "Rotate Pages",
-      "type": "boolean"
-     },
-     "mode": {
-      "default": "skip_text",
-      "description": "skip_text leaves pages that already have text alone",
-      "enum": [
-       "skip_text",
-       "force",
-       "redo"
-      ],
-      "title": "Mode",
-      "type": "string"
-     },
-     "output": {
-      "default": "pdf",
-      "enum": [
-       "pdf",
-       "pdfa"
-      ],
-      "title": "Output",
-      "type": "string"
-     }
-    },
-    "title": "Options",
-    "type": "object"
-   }
-  },
-  {
-   "id": "deskew",
-   "name": "Deskew PDF",
-   "description": "Straighten scanned pages that were fed in at an angle.",
-   "category": "optimize",
-   "accepts": [
-    ".pdf"
-   ],
-   "min_files": 1,
-   "max_files": null,
-   "premium": true,
-   "browser_capable": false,
-   "produces_pdf": true,
-   "options_schema": {
-    "additionalProperties": false,
-    "properties": {},
-    "title": "NoOptions",
-    "type": "object"
-   }
-  },
-  {
    "id": "protect",
    "name": "Protect PDF",
    "description": "Encrypt with a password (AES-256) and control printing, copying and editing.",
@@ -2835,6 +2704,137 @@
     "additionalProperties": false,
     "properties": {},
     "title": "NoOptions",
+    "type": "object"
+   }
+  },
+  {
+   "id": "ai_summarize",
+   "name": "AI Summarizer",
+   "description": "Get the key points of a long document in seconds.",
+   "category": "intelligence",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": 1,
+   "premium": true,
+   "browser_capable": false,
+   "produces_pdf": false,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "length": {
+      "default": "medium",
+      "enum": [
+       "short",
+       "medium",
+       "detailed"
+      ],
+      "title": "Length",
+      "type": "string"
+     },
+     "language": {
+      "default": "English",
+      "description": "Language of the summary",
+      "maxLength": 40,
+      "title": "Language",
+      "type": "string"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "ai_translate",
+   "name": "Translate PDF",
+   "description": "Translate a document's text into another language, keeping its headings.",
+   "category": "intelligence",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": 1,
+   "premium": true,
+   "browser_capable": false,
+   "produces_pdf": false,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "target_language": {
+      "maxLength": 40,
+      "minLength": 2,
+      "title": "Target Language",
+      "type": "string"
+     }
+    },
+    "required": [
+     "target_language"
+    ],
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "ai_chat",
+   "name": "Chat with PDF",
+   "description": "Ask questions and get answers that cite the page they came from.",
+   "category": "intelligence",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": 1,
+   "premium": true,
+   "browser_capable": false,
+   "produces_pdf": false,
+   "options_schema": {
+    "$defs": {
+     "ChatTurn": {
+      "properties": {
+       "role": {
+        "enum": [
+         "user",
+         "assistant"
+        ],
+        "title": "Role",
+        "type": "string"
+       },
+       "content": {
+        "maxLength": 8000,
+        "title": "Content",
+        "type": "string"
+       }
+      },
+      "required": [
+       "role",
+       "content"
+      ],
+      "title": "ChatTurn",
+      "type": "object"
+     }
+    },
+    "additionalProperties": false,
+    "properties": {
+     "question": {
+      "maxLength": 4000,
+      "minLength": 1,
+      "title": "Question",
+      "type": "string"
+     },
+     "history": {
+      "items": {
+       "$ref": "#/$defs/ChatTurn"
+      },
+      "maxItems": 20,
+      "title": "History",
+      "type": "array"
+     }
+    },
+    "required": [
+     "question"
+    ],
+    "title": "Options",
     "type": "object"
    }
   }
