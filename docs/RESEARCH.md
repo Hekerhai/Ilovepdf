@@ -34,7 +34,7 @@ Sejda sells a 7-day pass (one-time) plus web and desktop subscriptions; files de
 4. **Batch workflows**: chain any server tools (e.g. OCR → compress → watermark → protect) and save the chain.
 5. **More tools**: the union of iLovePDF + Sejda (~60 tools), see matrix below.
 
-## 3. Feature matrix (v1 = this build, v2 = next)
+## 3. Feature matrix (all shipped)
 
 Legend: **B** = runs in browser, **S** = runs on server worker. ★ = premium only.
 
@@ -67,10 +67,19 @@ Legend: **B** = runs in browser, **S** = runs on server worker. ★ = premium on
 | Edit metadata, Create bookmarks, Delete annotations, Flatten | S | pikepdf | v1 |
 | Protect (AES-256 + permissions), Unlock | S | pikepdf (qpdf) | v1 |
 | Sign (draw / type / image, placed visually) | S | reportlab + pikepdf | v1 |
-| Digital certificate signature ★ | S | pyHanko | v2 |
+| Digital certificate signature ★, Verify signatures | S | pyHanko | v1 |
 | Compare (text diff) ★ | S | pdfplumber + difflib | v1 |
-| Redact (true content removal) ★ | S | PyMuPDF | v2 |
-| Edit PDF (text/shape editor), Fill forms, Create forms | B | pdf-lib + pdf.js | v2 |
+| Redact (true content removal) ★ | S | PyMuPDF | v1 |
+| Edit PDF (text/shape editor), Fill forms, Create forms | B | pdf-lib + pdf.js | v1 |
+| Annotate (notes, highlight, underline, strike-out, shapes, ink) | S | PyMuPDF | v1 |
+| Ebook → PDF (EPUB, MOBI, FB2, XPS, CBZ); Pages/Keynote/Numbers → PDF | S | PyMuPDF; LibreOffice | v1 |
+| ZIP → PDF (convert everything inside and merge) | S | the converters above | v1 |
+| Accessibility check (report + basic fixes) | S | pikepdf | v1 |
+| AI question generator ★ | S | pluggable provider | v1 |
+| PDF reader (search, thumbnails, outline) | B | pdf.js viewer | v1 |
+| eSign requests (multi-signer, access codes, templates, sealed audit trail) | S | pyHanko + reportlab | v1 |
+| My documents, share links (password, expiry, download limit, embed) | S | storage port | v1 |
+| Import from link, Dropbox, Google Drive; browser extension | B + S | httpx (SSRF-checked); vendor pickers | v1 |
 | AI summarize / translate / chat ★ | S | pluggable provider (Claude, OpenAI-compatible, none) | v1 scaffold, needs key |
 | Workflows (chain tools) ★ | S | built-in pipeline runner | v1 |
 
@@ -129,3 +138,11 @@ frontend (Next.js PWA) ──/api──▶ api (FastAPI) ──▶ Postgres
 - **I**nterface segregation: small ports (`FileStorage`, `JobQueue`, `PaymentGateway`, `AIProvider`, `DocumentConverter`).
 - **D**ependency inversion: services depend on ports; concrete adapters are wired in one container (`app/container.py`)
   from settings.
+
+## 7. Smallpdf round
+
+Smallpdf (smallpdf.com) was reviewed in October 2026 and its tools and platform features were added. The full
+comparison, with sources, is the "Folio vs Smallpdf" report in the project files. In short: Smallpdf's edge was
+its platform (eSign with templates, document storage and sharing, a reader, cloud imports, desktop and mobile
+apps, a Chrome extension), not its tool list. Folio now has each of those except native desktop and mobile apps,
+which the installable PWA (file handling and share target) stands in for.
