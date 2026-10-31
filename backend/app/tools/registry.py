@@ -42,10 +42,12 @@ def default_registry() -> ToolRegistry:
         convert_from,
         convert_to,
         edit,
+        editor,
         intelligence,
         optimize,
         organize,
         security,
+        signatures,
     )
 
     return _default

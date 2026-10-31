@@ -713,6 +713,99 @@
    }
   },
   {
+   "id": "split_by_text",
+   "name": "Split by text",
+   "description": "Start a new file wherever a page contains some text, like 'Invoice' or a pattern.",
+   "category": "organize",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": 1,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "text": {
+      "description": "Text to look for",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Text",
+      "type": "string"
+     },
+     "regex": {
+      "default": false,
+      "description": "Treat the text as a regular expression",
+      "title": "Regex",
+      "type": "boolean"
+     },
+     "case_sensitive": {
+      "default": false,
+      "title": "Case Sensitive",
+      "type": "boolean"
+     },
+     "split": {
+      "default": "before",
+      "description": "Split before or after a matching page",
+      "enum": [
+       "before",
+       "after"
+      ],
+      "title": "Split",
+      "type": "string"
+     },
+     "name_after_match": {
+      "default": true,
+      "description": "Name each file after the line that matched",
+      "title": "Name After Match",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "text"
+    ],
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "rename",
+   "name": "Rename PDFs",
+   "description": "Rename many PDFs at once from their title, author, first line, page count or a counter.",
+   "category": "organize",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "pattern": {
+      "default": "{title}",
+      "description": "Use {title}, {author}, {subject}, {first_line}, {pages}, {date}, {name} and {n}",
+      "maxLength": 200,
+      "title": "Pattern",
+      "type": "string"
+     },
+     "start_at": {
+      "default": 1,
+      "description": "First value of {n}",
+      "minimum": 0,
+      "title": "Start At",
+      "type": "integer"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
    "id": "images_to_pdf",
    "name": "JPG to PDF",
    "description": "Turn photos and scans (JPG, PNG, WebP, TIFF...) into a PDF.",
@@ -771,6 +864,80 @@
      }
     },
     "title": "ImagesOptions",
+    "type": "object"
+   }
+  },
+  {
+   "id": "scan_to_pdf",
+   "name": "Scan to PDF",
+   "description": "Snap pages with your camera and get a clean, scanner-quality PDF.",
+   "category": "convert_to_pdf",
+   "accepts": [
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".webp",
+    ".tif",
+    ".tiff",
+    ".bmp",
+    ".gif"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": true,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "page_size": {
+      "default": "A4",
+      "description": "'fit' makes each page the size of its photo",
+      "enum": [
+       "fit",
+       "A4",
+       "Letter"
+      ],
+      "title": "Page Size",
+      "type": "string"
+     },
+     "orientation": {
+      "default": "auto",
+      "enum": [
+       "auto",
+       "portrait",
+       "landscape"
+      ],
+      "title": "Orientation",
+      "type": "string"
+     },
+     "margin_mm": {
+      "default": 0,
+      "maximum": 50,
+      "minimum": 0,
+      "title": "Margin Mm",
+      "type": "number"
+     },
+     "single_file": {
+      "default": true,
+      "description": "One PDF with all images, or one PDF per image",
+      "title": "Single File",
+      "type": "boolean"
+     },
+     "filter": {
+      "default": "enhanced",
+      "description": "'enhanced' evens out lighting and sharpens text, like a scanner",
+      "enum": [
+       "color",
+       "grayscale",
+       "enhanced",
+       "black_white"
+      ],
+      "title": "Filter",
+      "type": "string"
+     }
+    },
+    "title": "ScanOptions",
     "type": "object"
    }
   },
@@ -1565,6 +1732,417 @@
    }
   },
   {
+   "id": "edit_pdf",
+   "name": "Edit PDF",
+   "description": "Add text, images, shapes, highlights and freehand drawings, or white out content.",
+   "category": "edit",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": 1,
+   "premium": false,
+   "browser_capable": true,
+   "produces_pdf": true,
+   "options_schema": {
+    "$defs": {
+     "EditObject": {
+      "additionalProperties": false,
+      "description": "One thing to add to a page. x/y/width/height are fractions of the visible page, origin top-left.",
+      "properties": {
+       "type": {
+        "enum": [
+         "text",
+         "image",
+         "rect",
+         "ellipse",
+         "line",
+         "arrow",
+         "highlight",
+         "whiteout",
+         "draw"
+        ],
+        "title": "Type",
+        "type": "string"
+       },
+       "page": {
+        "minimum": 1,
+        "title": "Page",
+        "type": "integer"
+       },
+       "x": {
+        "maximum": 2,
+        "minimum": -1,
+        "title": "X",
+        "type": "number"
+       },
+       "y": {
+        "maximum": 2,
+        "minimum": -1,
+        "title": "Y",
+        "type": "number"
+       },
+       "width": {
+        "default": 0,
+        "maximum": 2,
+        "minimum": 0,
+        "title": "Width",
+        "type": "number"
+       },
+       "height": {
+        "default": 0,
+        "maximum": 2,
+        "minimum": 0,
+        "title": "Height",
+        "type": "number"
+       },
+       "x2": {
+        "anyOf": [
+         {
+          "type": "number"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "default": null,
+        "description": "Line and arrow end point",
+        "title": "X2"
+       },
+       "y2": {
+        "anyOf": [
+         {
+          "type": "number"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "default": null,
+        "title": "Y2"
+       },
+       "points": {
+        "anyOf": [
+         {
+          "items": {
+           "maxItems": 2,
+           "minItems": 2,
+           "prefixItems": [
+            {
+             "type": "number"
+            },
+            {
+             "type": "number"
+            }
+           ],
+           "type": "array"
+          },
+          "type": "array"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "default": null,
+        "description": "Freehand drawing path",
+        "title": "Points"
+       },
+       "text": {
+        "anyOf": [
+         {
+          "type": "string"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "default": null,
+        "title": "Text"
+       },
+       "font": {
+        "default": "sans",
+        "enum": [
+         "sans",
+         "serif",
+         "mono"
+        ],
+        "title": "Font",
+        "type": "string"
+       },
+       "font_size": {
+        "default": 14,
+        "description": "Points",
+        "exclusiveMinimum": 1,
+        "maximum": 400,
+        "title": "Font Size",
+        "type": "number"
+       },
+       "bold": {
+        "default": false,
+        "title": "Bold",
+        "type": "boolean"
+       },
+       "italic": {
+        "default": false,
+        "title": "Italic",
+        "type": "boolean"
+       },
+       "color": {
+        "default": "#111827",
+        "title": "Color",
+        "type": "string"
+       },
+       "fill": {
+        "anyOf": [
+         {
+          "type": "string"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "default": null,
+        "title": "Fill"
+       },
+       "stroke_width": {
+        "default": 2,
+        "maximum": 50,
+        "minimum": 0,
+        "title": "Stroke Width",
+        "type": "number"
+       },
+       "opacity": {
+        "default": 1,
+        "maximum": 1,
+        "minimum": 0,
+        "title": "Opacity",
+        "type": "number"
+       },
+       "image": {
+        "anyOf": [
+         {
+          "type": "string"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "default": null,
+        "description": "Image as a data URL",
+        "title": "Image"
+       }
+      },
+      "required": [
+       "type",
+       "page",
+       "x",
+       "y"
+      ],
+      "title": "EditObject",
+      "type": "object"
+     }
+    },
+    "additionalProperties": false,
+    "properties": {
+     "objects": {
+      "description": "What to add, and where",
+      "items": {
+       "$ref": "#/$defs/EditObject"
+      },
+      "minItems": 1,
+      "title": "Objects",
+      "type": "array"
+     },
+     "flatten": {
+      "default": false,
+      "description": "Flatten form fields and annotations into the page",
+      "title": "Flatten",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "objects"
+    ],
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "fill_forms",
+   "name": "Fill PDF forms",
+   "description": "Type into a PDF's form fields, tick its boxes and pick its options, then save or flatten it.",
+   "category": "edit",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": 1,
+   "premium": false,
+   "browser_capable": true,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "fields": {
+      "additionalProperties": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "boolean"
+        }
+       ]
+      },
+      "description": "Field name to value: text, true/false for checkboxes, or the option to pick",
+      "title": "Fields",
+      "type": "object"
+     },
+     "flatten": {
+      "default": false,
+      "description": "Flatten so the answers can't be changed",
+      "title": "Flatten",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "fields"
+    ],
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "create_forms",
+   "name": "Create PDF forms",
+   "description": "Turn any PDF into a fillable form with text boxes, checkboxes, dropdowns, radio buttons and signature fields.",
+   "category": "edit",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": 1,
+   "premium": false,
+   "browser_capable": true,
+   "produces_pdf": true,
+   "options_schema": {
+    "$defs": {
+     "FormFieldSpec": {
+      "additionalProperties": false,
+      "properties": {
+       "type": {
+        "enum": [
+         "text",
+         "multiline",
+         "checkbox",
+         "dropdown",
+         "radio",
+         "signature"
+        ],
+        "title": "Type",
+        "type": "string"
+       },
+       "name": {
+        "maxLength": 120,
+        "minLength": 1,
+        "title": "Name",
+        "type": "string"
+       },
+       "page": {
+        "minimum": 1,
+        "title": "Page",
+        "type": "integer"
+       },
+       "x": {
+        "maximum": 1,
+        "minimum": 0,
+        "title": "X",
+        "type": "number"
+       },
+       "y": {
+        "maximum": 1,
+        "minimum": 0,
+        "title": "Y",
+        "type": "number"
+       },
+       "width": {
+        "exclusiveMinimum": 0,
+        "maximum": 1,
+        "title": "Width",
+        "type": "number"
+       },
+       "height": {
+        "exclusiveMinimum": 0,
+        "maximum": 1,
+        "title": "Height",
+        "type": "number"
+       },
+       "options": {
+        "description": "Choices for dropdowns and radio groups",
+        "items": {
+         "type": "string"
+        },
+        "title": "Options",
+        "type": "array"
+       },
+       "required": {
+        "default": false,
+        "title": "Required",
+        "type": "boolean"
+       },
+       "default": {
+        "anyOf": [
+         {
+          "type": "string"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "default": null,
+        "title": "Default"
+       },
+       "font_size": {
+        "default": 0,
+        "description": "0 = auto size",
+        "maximum": 72,
+        "minimum": 0,
+        "title": "Font Size",
+        "type": "number"
+       }
+      },
+      "required": [
+       "type",
+       "name",
+       "page",
+       "x",
+       "y",
+       "width",
+       "height"
+      ],
+      "title": "FormFieldSpec",
+      "type": "object"
+     }
+    },
+    "additionalProperties": false,
+    "properties": {
+     "fields": {
+      "items": {
+       "$ref": "#/$defs/FormFieldSpec"
+      },
+      "minItems": 1,
+      "title": "Fields",
+      "type": "array"
+     }
+    },
+    "required": [
+     "fields"
+    ],
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
    "id": "ai_summarize",
    "name": "AI Summarizer",
    "description": "Get the key points of a long document in seconds.",
@@ -2079,6 +2657,184 @@
      }
     },
     "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "digital_sign",
+   "name": "Digital signature",
+   "description": "Seal a PDF with a certificate-based digital signature that reveals any later change.",
+   "category": "security",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": 1,
+   "premium": true,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "certificate": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Your certificate (.p12 or .pfx) as a data URL. Leave empty to create one for you",
+      "title": "Certificate"
+     },
+     "certificate_password": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Password of the certificate file",
+      "title": "Certificate Password"
+     },
+     "signer_name": {
+      "anyOf": [
+       {
+        "maxLength": 120,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Name on a newly created certificate",
+      "title": "Signer Name"
+     },
+     "signer_email": {
+      "anyOf": [
+       {
+        "maxLength": 200,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "title": "Signer Email"
+     },
+     "reason": {
+      "anyOf": [
+       {
+        "maxLength": 200,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Why you are signing, e.g. 'I approve'",
+      "title": "Reason"
+     },
+     "location": {
+      "anyOf": [
+       {
+        "maxLength": 120,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "title": "Location"
+     },
+     "visible": {
+      "default": true,
+      "description": "Show a signature stamp on the page",
+      "title": "Visible",
+      "type": "boolean"
+     },
+     "page": {
+      "default": 1,
+      "description": "Page for the stamp (counts from 1; use a large number for the last)",
+      "minimum": 1,
+      "title": "Page",
+      "type": "integer"
+     },
+     "position": {
+      "default": "bottom-right",
+      "enum": [
+       "top-left",
+       "top-right",
+       "bottom-left",
+       "bottom-center",
+       "bottom-right"
+      ],
+      "title": "Position",
+      "type": "string"
+     },
+     "field_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Sign an existing empty signature field instead",
+      "title": "Field Name"
+     },
+     "certify": {
+      "default": false,
+      "description": "Certify: allow only form filling after signing",
+      "title": "Certify",
+      "type": "boolean"
+     },
+     "timestamp_url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "RFC 3161 timestamp server, e.g. https://freetsa.org/tsr",
+      "title": "Timestamp Url"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "verify_signatures",
+   "name": "Check signatures",
+   "description": "See who digitally signed a PDF, when, and whether it has changed since.",
+   "category": "security",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": 1,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": false,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {},
+    "title": "NoOptions",
     "type": "object"
    }
   }

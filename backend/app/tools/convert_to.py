@@ -7,7 +7,8 @@ from typing import Literal
 from urllib.parse import urlparse
 
 import img2pdf
-from PIL import Image, ImageOps
+import numpy as np
+from PIL import Image, ImageFilter, ImageOps
 from pydantic import Field
 
 from app.domain.errors import ValidationFailed
@@ -83,6 +84,60 @@ class ImagesToPdfTool(Tool):
         if options.single_file:
             return [images_to_pdf(inputs, ctx.output_path(f"{stem(inputs[0])}.pdf"), options)]
         return [images_to_pdf([p], ctx.output_path(f"{stem(p)}.pdf"), options) for p in inputs]
+
+
+class ScanOptions(ImagesOptions):
+    page_size: Literal["fit", "A4", "Letter"] = Field("A4", description="'fit' makes each page the size of its photo")
+    filter: Literal["color", "grayscale", "enhanced", "black_white"] = Field(
+        "enhanced", description="'enhanced' evens out lighting and sharpens text, like a scanner"
+    )
+
+
+def clean_scan(path: Path, out: Path, mode: str) -> Path:
+    """Make a phone photo of a document look scanned: even lighting, crisp text, white paper."""
+    with Image.open(path) as source:
+        image = ImageOps.exif_transpose(source).convert("RGB")
+    if mode == "color":
+        image = ImageOps.autocontrast(image, cutoff=1)
+        image.save(out, "JPEG", quality=88)
+        return out
+    gray = image.convert("L")
+    if mode == "grayscale":
+        ImageOps.autocontrast(gray, cutoff=1).save(out, "JPEG", quality=88)
+        return out
+    # Divide by a heavily blurred copy to remove shadows and uneven light, then stretch the contrast.
+    radius = max(gray.size) // 30 or 1
+    background = gray.filter(ImageFilter.GaussianBlur(radius))
+    ratio = np.asarray(gray, dtype=np.float32) * 245 / np.maximum(np.asarray(background, dtype=np.float32), 1)
+    flat = Image.fromarray(np.clip(ratio, 0, 255).astype(np.uint8))
+    flat = ImageOps.autocontrast(flat, cutoff=(2, 1)).filter(ImageFilter.UnsharpMask(radius=2, percent=120))
+    if mode == "black_white":
+        out = out.with_suffix(".png")
+        flat.point(lambda v: 255 if v > 165 else 0, mode="1").save(out, "PNG", optimize=True)
+        return out
+    flat.save(out, "JPEG", quality=85)
+    return out
+
+
+@register
+class ScanToPdfTool(Tool):
+    id = "scan_to_pdf"
+    name = "Scan to PDF"
+    description = "Snap pages with your camera and get a clean, scanner-quality PDF."
+    category = Category.CONVERT_TO
+    accepts = IMAGES
+    browser_capable = True
+    Options = ScanOptions
+
+    def run(self, inputs: list[Path], options: ScanOptions, ctx: ToolContext) -> list[Path]:
+        scans = [clean_scan(p, ctx.work_dir / f"scan-{i:04d}.jpg", options.filter) for i, p in enumerate(inputs)]
+        name = f"{stem(inputs[0])}-scan.pdf"
+        if options.single_file:
+            return [images_to_pdf(scans, ctx.output_path(name), options)]
+        return [
+            images_to_pdf([p], ctx.output_path(f"{stem(src)}-scan.pdf"), options)
+            for p, src in zip(scans, inputs, strict=True)
+        ]
 
 
 class _OfficeToPdf(Tool):

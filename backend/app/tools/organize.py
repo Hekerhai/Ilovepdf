@@ -1,10 +1,14 @@
 """Organize tools: merge, split, reorder, rotate, and other page-level operations."""
 
+import datetime as dt
 import io
+import re
+import shutil
 from enum import StrEnum
 from pathlib import Path
 from typing import Literal
 
+import pdfplumber
 import pikepdf
 from pydantic import BaseModel, Field
 from pypdf import PdfReader
@@ -393,4 +397,108 @@ class ResizeTool(Tool):
                     sheet = out.add_blank_page(page_size=(w, h))
                     sheet.add_overlay(out.copy_foreign(page.obj), pikepdf.Rectangle(m, m, w - m, h - m))
                 outputs.append(save_pdf(out, ctx.output_path(f"{stem(path)}-{options.size}.pdf")))
+        return outputs
+
+
+@register
+class SplitByTextTool(Tool):
+    id = "split_by_text"
+    name = "Split by text"
+    description = "Start a new file wherever a page contains some text, like 'Invoice' or a pattern."
+    category = Category.ORGANIZE
+    max_files = 1
+
+    class Options(ToolOptions):
+        text: str = Field(..., min_length=1, max_length=200, description="Text to look for")
+        regex: bool = Field(False, description="Treat the text as a regular expression")
+        case_sensitive: bool = False
+        split: Literal["before", "after"] = Field("before", description="Split before or after a matching page")
+        name_after_match: bool = Field(True, description="Name each file after the line that matched")
+
+    def run(self, inputs: list[Path], options: Options, ctx: ToolContext) -> list[Path]:
+        flags = 0 if options.case_sensitive else re.IGNORECASE
+        try:
+            pattern = re.compile(options.text if options.regex else re.escape(options.text), flags)
+        except re.error as exc:
+            raise ValidationFailed(f"That pattern isn't valid: {exc}") from None
+        hits: dict[int, str] = {}
+        with pdfplumber.open(inputs[0]) as doc:
+            total = len(doc.pages)
+            for i, page in enumerate(doc.pages):
+                text = page.extract_text() or ""
+                match = pattern.search(text)
+                if match:
+                    start = text.rfind("\n", 0, match.start()) + 1
+                    end = text.find("\n", match.end())
+                    hits[i] = text[start : end if end != -1 else None].strip()
+        if not hits:
+            raise ValidationFailed(f"No page contains '{options.text}'. Scanned pages need OCR first.")
+        starts = sorted({0, *((i if options.split == "before" else i + 1) for i in hits)} - {total})
+        groups = [list(range(a, b)) for a, b in zip(starts, [*starts[1:], total], strict=True)]
+        base = stem(inputs[0])
+        outputs = []
+        with open_pdf(inputs[0]) as src:
+            for n, group in enumerate(groups, start=1):
+                label_page = group[0] if options.split == "before" else group[-1]
+                label = _slug(hits.get(label_page, "")) if options.name_after_match else ""
+                name = f"{base}-{n:03d}{'-' + label if label else ''}.pdf"
+                outputs.append(_write_pages(src, group, ctx.output_path(name)))
+        return outputs
+
+
+def _slug(text: str, limit: int = 48) -> str:
+    return re.sub(r"[^\w-]+", "-", text, flags=re.UNICODE).strip("-")[:limit].strip("-")
+
+
+# Titles some tools write by default; renaming a file to "untitled" helps no one.
+PLACEHOLDER_TITLES = {"untitled", "untitled document", "document", "microsoft word", "pdf"}
+
+
+@register
+class RenameTool(Tool):
+    id = "rename"
+    name = "Rename PDFs"
+    description = "Rename many PDFs at once from their title, author, first line, page count or a counter."
+    category = Category.ORGANIZE
+
+    class Options(ToolOptions):
+        pattern: str = Field(
+            "{title}",
+            max_length=200,
+            description="Use {title}, {author}, {subject}, {first_line}, {pages}, {date}, {name} and {n}",
+        )
+        start_at: int = Field(1, ge=0, description="First value of {n}")
+
+    def run(self, inputs: list[Path], options: Options, ctx: ToolContext) -> list[Path]:
+        outputs, used = [], set()
+        for n, path in enumerate(inputs, start=options.start_at):
+            with open_pdf(path) as pdf:
+                info = pdf.docinfo
+                pages = len(pdf.pages)
+                meta = {k: str(info.get(f"/{k.capitalize()}", "")).strip() for k in ("title", "author", "subject")}
+                if meta["title"].lower() in PLACEHOLDER_TITLES:
+                    meta["title"] = ""
+            with pdfplumber.open(path) as doc:
+                first_text = (doc.pages[0].extract_text() or "") if doc.pages else ""
+            first_line = next((line.strip() for line in first_text.splitlines() if line.strip()), "")
+            values = {
+                **meta,
+                "first_line": first_line,
+                "pages": str(pages),
+                "date": dt.date.today().isoformat(),
+                "name": stem(path),
+                "n": str(n),
+            }
+            try:
+                name = options.pattern.format_map(values)
+            except (KeyError, ValueError, IndexError) as exc:
+                raise ValidationFailed(f"Unknown placeholder in the pattern: {exc}") from None
+            name = _slug(name, 120) or stem(path)
+            candidate, k = name, 2
+            while candidate.lower() in used:
+                candidate, k = f"{name}-{k}", k + 1
+            used.add(candidate.lower())
+            out = ctx.output_path(f"{candidate}.pdf")
+            shutil.copyfile(path, out)
+            outputs.append(out)
         return outputs

@@ -88,3 +88,34 @@ def anchor_xy(
     x = {"left": margin, "center": (page_w - box_w) / 2, "right": page_w - box_w - margin}[horizontal]
     y = {"bottom": margin, "center": (page_h - box_h) / 2, "top": page_h - box_h - margin}[vertical]
     return x, y
+
+
+def visual_to_user(page: pikepdf.Page) -> Callable[[float, float], tuple[float, float]]:
+    """Map visual coordinates (bottom-left origin, as the reader sees the page) to PDF user space.
+
+    Needed when writing objects that live in user space directly, such as form widgets, rather than through
+    ``stamp_pages``. Mirrors ``visualToUser`` in the web app's browser handlers.
+    """
+    x0, y0, x1, y1 = visible_box(page)
+    w, h = x1 - x0, y1 - y0
+    rotation = _rotation(page)
+    if rotation == 90:
+        return lambda X, Y: (x0 + w - Y, y0 + X)
+    if rotation == 180:
+        return lambda X, Y: (x0 + w - X, y0 + h - Y)
+    if rotation == 270:
+        return lambda X, Y: (x0 + Y, y0 + h - X)
+    return lambda X, Y: (x0 + X, y0 + Y)
+
+
+def user_rect(page: pikepdf.Page, x: float, y: float, width: float, height: float) -> list[float]:
+    """A box given as fractions of the visual page (top-left origin, as on screen) in user-space PDF coordinates."""
+    vw, vh = visual_size(page)
+    to_user = visual_to_user(page)
+    ax, ay = to_user(x * vw, vh - y * vh)
+    bx, by = to_user((x + width) * vw, vh - (y + height) * vh)
+    return [min(ax, bx), min(ay, by), max(ax, bx), max(ay, by)]
+
+
+def page_rotation(page: pikepdf.Page) -> int:
+    return _rotation(page)
