@@ -39,6 +39,7 @@ class Plan:
     max_workflows: int | None
     team_workspace: bool = False
     monthly_api_credits: int = 250
+    esign_requests_per_month: int | None = 3  # None = unlimited
     prices: dict[BillingInterval, Price] = field(default_factory=dict)
     per_seat: bool = False
     min_seats: int = 1
@@ -59,6 +60,7 @@ PLANS: dict[PlanId, Plan] = {
         premium_tools=False,
         max_workflows=0,
         monthly_api_credits=0,
+        esign_requests_per_month=0,
     ),
     PlanId.FREE: Plan(
         id=PlanId.FREE,
@@ -68,7 +70,12 @@ PLANS: dict[PlanId, Plan] = {
         tasks_per_day=25,
         premium_tools=False,
         max_workflows=0,
-        highlights=("All in-browser tools, unlimited", "25 server tasks a day", "Files up to 50 MB"),
+        highlights=(
+            "All in-browser tools, unlimited",
+            "25 server tasks a day",
+            "Files up to 50 MB",
+            "3 signature requests a month",
+        ),
     ),
     PlanId.PRO: Plan(
         id=PlanId.PRO,
@@ -79,6 +86,7 @@ PLANS: dict[PlanId, Plan] = {
         premium_tools=True,
         max_workflows=20,
         monthly_api_credits=1000,
+        esign_requests_per_month=None,
         prices={
             BillingInterval.MONTH: Price(usd=600, inr=39900),
             BillingInterval.YEAR: Price(usd=4800, inr=319900),
@@ -87,6 +95,7 @@ PLANS: dict[PlanId, Plan] = {
             "Every tool, including OCR, PDF to Office and AI",
             "Unlimited tasks, files up to 1 GB",
             "Batch workflows",
+            "Unlimited signature requests",
             "1,000 API credits a month",
         ),
     ),
@@ -100,6 +109,7 @@ PLANS: dict[PlanId, Plan] = {
         max_workflows=None,
         team_workspace=True,
         monthly_api_credits=5000,
+        esign_requests_per_month=None,
         per_seat=True,
         min_seats=3,
         prices={

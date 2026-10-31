@@ -7,7 +7,19 @@ from sqlalchemy import delete as sa_delete
 from sqlalchemy import select
 
 from app.domain.ports import FileStorage
-from app.infra.db import ApiKey, Database, Job, LoginToken, Membership, Subscription, Team, User, Workflow, utcnow
+from app.infra.db import (
+    ApiKey,
+    Database,
+    Job,
+    LoginToken,
+    Membership,
+    SignatureRequest,
+    Subscription,
+    Team,
+    User,
+    Workflow,
+    utcnow,
+)
 from app.services.billing import BillingService
 
 log = logging.getLogger(__name__)
@@ -53,6 +65,15 @@ class PrivacyService:
                     }
                     for j in session.scalars(select(Job).where(Job.user_id == user_id))
                 ],
+                "signature_requests": [
+                    {
+                        "title": r.title,
+                        "status": r.status,
+                        "created_at": r.created_at.isoformat(),
+                        "signers": [{"name": s.name, "email": s.email, "status": s.status} for s in r.signers],
+                    }
+                    for r in session.scalars(select(SignatureRequest).where(SignatureRequest.owner_id == user_id))
+                ],
                 "workflows": [
                     {"name": w.name, "steps": w.steps}
                     for w in session.scalars(select(Workflow).where(Workflow.user_id == user_id))
@@ -82,6 +103,9 @@ class PrivacyService:
             for job_id in session.scalars(select(Job.id).where(Job.user_id == user_id)):
                 self.storage.delete_prefix(f"jobs/{job_id}/")
             session.execute(delete(Job).where(Job.user_id == user_id))
+            for request in session.scalars(select(SignatureRequest).where(SignatureRequest.owner_id == user_id)):
+                self.storage.delete_prefix(f"esign/{request.id}/")
+                session.delete(request)
             session.execute(delete(Workflow).where(Workflow.user_id == user_id))
             session.execute(delete(ApiKey).where(ApiKey.user_id == user_id))
             session.execute(delete(LoginToken).where(LoginToken.email == user.email))

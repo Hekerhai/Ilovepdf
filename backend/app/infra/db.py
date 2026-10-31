@@ -177,6 +177,70 @@ def alembic_config(connection=None):
     return config
 
 
+class SignatureRequest(Base):
+    """A document sent to one or more people to sign. Its files live under esign/{id}/ in storage."""
+
+    __tablename__ = "signature_requests"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    owner_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    title: Mapped[str] = mapped_column(String(200))
+    message: Mapped[str | None] = mapped_column(Text)
+    file_name: Mapped[str] = mapped_column(String(255))
+    status: Mapped[str] = mapped_column(String(16), default="sent")  # sent | completed | declined | cancelled | expired
+    sequential: Mapped[bool] = mapped_column(Boolean, default=False)
+    original_sha256: Mapped[str] = mapped_column(String(64))
+    final_sha256: Mapped[str | None] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(default=utcnow, index=True)
+    expires_at: Mapped[datetime]
+    completed_at: Mapped[datetime | None]
+    files_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    signers: Mapped[list["Signer"]] = relationship(
+        back_populates="request", cascade="all, delete-orphan", order_by="Signer.position"
+    )
+    events: Mapped[list["SignatureEvent"]] = relationship(
+        back_populates="request", cascade="all, delete-orphan", order_by="SignatureEvent.at"
+    )
+
+
+class Signer(Base):
+    __tablename__ = "signers"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    request_id: Mapped[str] = mapped_column(ForeignKey("signature_requests.id", ondelete="CASCADE"), index=True)
+    position: Mapped[int] = mapped_column(Integer)
+    name: Mapped[str] = mapped_column(String(200))
+    email: Mapped[str] = mapped_column(String(320))
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    status: Mapped[str] = mapped_column(String(16), default="waiting")  # waiting | pending | viewed | signed | declined
+    # [{"type": "signature" | "initials" | "date" | "name" | "text" | "checkbox", "page", "x", "y", "width", "height",
+    #   "required", "label"}], positions as fractions of the visible page (top-left origin)
+    fields: Mapped[list] = mapped_column(JSON)
+    values: Mapped[dict | None] = mapped_column(JSON)  # filled in when they sign
+    signed_at: Mapped[datetime | None]
+    decline_reason: Mapped[str | None] = mapped_column(Text)
+
+    request: Mapped[SignatureRequest] = relationship(back_populates="signers")
+
+
+class SignatureEvent(Base):
+    """The audit trail: every send, view, signature, decline and reminder."""
+
+    __tablename__ = "signature_events"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    request_id: Mapped[str] = mapped_column(ForeignKey("signature_requests.id", ondelete="CASCADE"), index=True)
+    signer_id: Mapped[str | None] = mapped_column(String(32))
+    kind: Mapped[str] = mapped_column(String(16))
+    at: Mapped[datetime] = mapped_column(default=utcnow)
+    ip: Mapped[str | None] = mapped_column(String(64))
+    user_agent: Mapped[str | None] = mapped_column(String(300))
+    detail: Mapped[str | None] = mapped_column(Text)
+
+    request: Mapped[SignatureRequest] = relationship(back_populates="events")
+
+
 class Database:
     def __init__(self, url: str):
         connect_args = {"check_same_thread": False} if url.startswith("sqlite") else {}

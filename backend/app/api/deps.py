@@ -24,11 +24,14 @@ def container() -> Container:
     return get_container()
 
 
-def client_ip_hash(request: Request, c: Container) -> str:
+def client_ip(request: Request) -> str:
     # Behind the bundled reverse proxy the client IP is in X-Forwarded-For.
     forwarded = request.headers.get("x-forwarded-for", "")
-    ip = forwarded.split(",")[0].strip() or (request.client.host if request.client else "unknown")
-    return hashlib.sha256(f"{c.settings.secret_key}:{ip}".encode()).hexdigest()
+    return forwarded.split(",")[0].strip() or (request.client.host if request.client else "unknown")
+
+
+def client_ip_hash(request: Request, c: Container) -> str:
+    return hashlib.sha256(f"{c.settings.secret_key}:{client_ip(request)}".encode()).hexdigest()
 
 
 def _bearer(request: Request) -> str | None:

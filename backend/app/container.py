@@ -17,6 +17,7 @@ from app.infra.ratelimit import MemoryRateLimiter, RedisRateLimiter
 from app.infra.storage import LocalStorage, S3Storage
 from app.services.auth import AuthService
 from app.services.billing import BillingService
+from app.services.esign import ESignService
 from app.services.jobs import JobService
 from app.services.privacy import PrivacyService
 from app.services.quota import QuotaService
@@ -42,6 +43,7 @@ class Container:
     workflows: WorkflowService
     billing: BillingService
     privacy: PrivacyService
+    esign: ESignService
     limiter: MemoryRateLimiter | RedisRateLimiter
 
 
@@ -135,6 +137,15 @@ def build_container(settings: Settings | None = None) -> Container:
         workflows=WorkflowService(db=db, jobs=jobs),
         billing=billing,
         privacy=PrivacyService(db=db, storage=storage, billing=billing),
+        esign=ESignService(
+            db=db,
+            storage=storage,
+            mailer=mailer,
+            public_url=s.public_url,
+            brand_name=s.brand_name,
+            work_root=s.work_dir,
+            retention_days=s.esign_retention_days,
+        ),
         limiter=MemoryRateLimiter() if s.queue_mode == "inline" else RedisRateLimiter(s.redis_url),
     )
 

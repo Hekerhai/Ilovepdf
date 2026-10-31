@@ -16,6 +16,7 @@ def main() -> None:
     while True:
         try:
             container.privacy.purge_expired()
+            container.esign.purge()
         except Exception:
             log.exception("Janitor pass failed")
         time.sleep(interval)

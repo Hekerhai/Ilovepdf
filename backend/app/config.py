@@ -34,6 +34,7 @@ class Settings(BaseSettings):
 
     # Privacy
     file_ttl_hours: float = 2.0
+    esign_retention_days: int = 30  # signed copies are kept this long after completion, then deleted
     janitor_interval_seconds: int = 300
 
     # Engines
