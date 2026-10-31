@@ -52,6 +52,11 @@ import {
   SquareSplitHorizontal,
   Stamp,
   Wrench,
+  MessageSquareText,
+  BookOpen,
+  FileArchive,
+  GraduationCap,
+  Accessibility,
 } from "lucide-react";
 
 /** Presentation details the API doesn't carry: icons, colours and the order tools appear in. */
@@ -110,6 +115,11 @@ export const TOOL_ICONS: Record<string, LucideIcon> = {
   split_by_text: TextSearch,
   rename: Tags,
   scan_to_pdf: Camera,
+  annotate_pdf: MessageSquareText,
+  ebook_to_pdf: BookOpen,
+  zip_to_pdf: FileArchive,
+  ai_questions: GraduationCap,
+  accessibility_check: Accessibility,
 };
 
 export const CATEGORY_STYLES: Record<string, { text: string; bg: string; ring: string }> = {

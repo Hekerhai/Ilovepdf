@@ -39,6 +39,7 @@ def plan_out(plan: Plan) -> dict:
         "workflows": plan.max_workflows != 0,
         "team_workspace": plan.team_workspace,
         "esign_requests_per_month": plan.esign_requests_per_month,
+        "storage_mb": plan.storage_bytes // (1024 * 1024),
     }
 
 

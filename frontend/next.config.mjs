@@ -22,6 +22,10 @@ const nextConfig = {
           { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" },
         ],
       },
+      // Only share links may be embedded on other sites (that's what their embed code is for); nothing else can be
+      // framed, which blocks clickjacking.
+      { source: "/((?!s/).*)", headers: [{ key: "Content-Security-Policy", value: "frame-ancestors 'self'" }] },
+      { source: "/s/:token*", headers: [{ key: "Content-Security-Policy", value: "frame-ancestors *" }] },
     ];
   },
 };

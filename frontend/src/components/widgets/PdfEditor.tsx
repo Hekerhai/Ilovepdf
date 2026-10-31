@@ -13,8 +13,11 @@ import {
   MoveUpRight,
   Pencil,
   Square,
+  StickyNote,
+  Strikethrough,
   Trash2,
   Type,
+  Underline,
   Undo2,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -30,7 +33,7 @@ type Drag =
   | { mode: "draw"; index: number }
   | { mode: "move" | "resize"; index: number; origin: [number, number]; start: EditObject };
 
-const TOOLS: { id: Tool; label: string; icon: LucideIcon }[] = [
+const EDIT_TOOLS: { id: Tool; label: string; icon: LucideIcon }[] = [
   { id: "select", label: "Select and move", icon: MousePointer2 },
   { id: "text", label: "Text", icon: Type },
   { id: "image", label: "Image", icon: ImagePlus },
@@ -43,11 +46,26 @@ const TOOLS: { id: Tool; label: string; icon: LucideIcon }[] = [
   { id: "draw", label: "Draw", icon: Pencil },
 ];
 
+const ANNOTATE_TOOLS: { id: Tool; label: string; icon: LucideIcon }[] = [
+  { id: "select", label: "Select and move", icon: MousePointer2 },
+  { id: "note", label: "Sticky note", icon: StickyNote },
+  { id: "highlight", label: "Highlight", icon: Highlighter },
+  { id: "underline", label: "Underline", icon: Underline },
+  { id: "strikeout", label: "Strike out", icon: Strikethrough },
+  { id: "text", label: "Text box", icon: Type },
+  { id: "rect", label: "Rectangle", icon: Square },
+  { id: "ellipse", label: "Ellipse", icon: Circle },
+  { id: "arrow", label: "Arrow", icon: MoveUpRight },
+  { id: "line", label: "Line", icon: Minus },
+  { id: "draw", label: "Draw", icon: Pencil },
+];
+const NOTE_SIZE = 22; // points
+
 const FAMILIES = { sans: "Helvetica, Arial, sans-serif", serif: "'Times New Roman', Times, serif", mono: "'Courier New', Courier, monospace" };
 // Must match ASCENT / LINE_HEIGHT in the browser handlers and backend/app/tools/editor.py.
 const ASCENT = 0.8;
 const LINE_HEIGHT = 1.2;
-const BOX_TYPES = new Set(["image", "rect", "ellipse", "highlight", "whiteout"]);
+const BOX_TYPES = new Set(["image", "rect", "ellipse", "highlight", "whiteout", "underline", "strikeout", "note"]);
 
 type Style = Pick<EditObject, "color" | "fill" | "stroke_width" | "opacity" | "font" | "font_size" | "bold" | "italic">;
 const DEFAULT_STYLE: Style = { color: "#111827", fill: null, stroke_width: 2, opacity: 1, font: "sans", font_size: 16, bold: false, italic: false };
@@ -88,8 +106,14 @@ function moved(start: EditObject, dx: number, dy: number): EditObject {
   return next;
 }
 
-/** A visual PDF editor: add text, images, shapes, highlights, white-out and freehand drawing to any page. */
-export function PdfEditor({ file, values, onChange }: { file: File; values: OptionValues; onChange: (v: OptionValues) => void }) {
+/**
+ * A visual PDF editor: add text, images, shapes, highlights, white-out and freehand drawing to any page.
+ * In "annotate" mode the same canvas places real PDF annotations (comments, notes, markup) instead.
+ */
+export function PdfEditor({ file, values, onChange, mode = "edit" }: { file: File; values: OptionValues; onChange: (v: OptionValues) => void; mode?: "edit" | "annotate" }) {
+  const annotating = mode === "annotate";
+  const TOOLS = annotating ? ANNOTATE_TOOLS : EDIT_TOOLS;
+  const commentInput = useRef<HTMLInputElement>(null);
   const objects = (values.objects as EditObject[] | undefined) ?? [];
   const [page, setPage] = useState(1);
   const { view, count, error } = usePdfPage(file, page);
@@ -174,6 +198,13 @@ export function PdfEditor({ file, values, onChange }: { file: File; values: Opti
       setTimeout(() => textInput.current?.select(), 0);
       return;
     }
+    if (tool === "note") {
+      setObjects([...objects, { ...base, type: "note", color: "#F59E0B", width: NOTE_SIZE / W, height: NOTE_SIZE / H, text: "" }]);
+      setSelected(objects.length);
+      setTool("select");
+      setTimeout(() => commentInput.current?.focus(), 0);
+      return;
+    }
     if (tool === "draw") obj = { ...base, type: "draw", x: 0, y: 0, points: [[fx, fy]] };
     else if (tool === "line" || tool === "arrow") obj = { ...base, type: tool, x2: fx, y2: fy };
     else obj = { ...base, type: tool, width: 0, height: 0, fill: tool === "rect" || tool === "ellipse" ? style.fill : null };
@@ -220,7 +251,7 @@ export function PdfEditor({ file, values, onChange }: { file: File; values: Opti
     if (obj.type === "line" || obj.type === "arrow") {
       if (Math.hypot((obj.x2 ?? 0) - obj.x, (obj.y2 ?? 0) - obj.y) < 0.01) update(d.index, { x2: obj.x + 0.2, y2: obj.y }, false);
     } else if ((obj.width ?? 0) < 0.01 || (obj.height ?? 0) < 0.005) {
-      const size = obj.type === "highlight" ? [0.25, 0.022] : obj.type === "whiteout" ? [0.2, 0.04] : [0.2, 0.08];
+      const size = ["highlight", "underline", "strikeout"].includes(obj.type) ? [0.25, 0.022] : obj.type === "whiteout" ? [0.2, 0.04] : [0.2, 0.08];
       update(d.index, { width: size[0], height: size[1] }, false);
     }
     setTool("select");
@@ -255,6 +286,7 @@ export function PdfEditor({ file, values, onChange }: { file: File; values: Opti
   const showFill = sel ? sel.type === "rect" || sel.type === "ellipse" : tool === "rect" || tool === "ellipse";
   const showText = sel ? sel.type === "text" : tool === "text";
   const showStroke = sel ? ["rect", "ellipse", "line", "arrow", "draw"].includes(sel.type) : ["rect", "ellipse", "line", "arrow", "draw"].includes(tool);
+  const noun = annotating ? "annotation" : "change";
 
   return (
     <div className="space-y-3">
@@ -306,7 +338,26 @@ export function PdfEditor({ file, values, onChange }: { file: File; values: Opti
             <input type="range" min={0} max={12} step={0.5} value={current.stroke_width ?? 2} onChange={(e) => setStyleValue({ stroke_width: Number(e.target.value) })} />
           </label>
         )}
-        {showText && (
+        {annotating && sel && (
+          <label className="flex min-w-56 flex-1 flex-col gap-1">
+            <span className="text-xs text-slate-500">{sel.type === "note" ? "Note" : "Comment (shown in the comments panel)"}</span>
+            <input
+              ref={commentInput}
+              className="input py-1"
+              aria-label={sel.type === "note" ? "Note" : "Comment"}
+              placeholder={sel.type === "note" ? "Write your note" : "Optional"}
+              value={(sel.type === "note" ? sel.text : sel.comment) ?? ""}
+              onChange={(e) => update(selected!, sel.type === "note" ? { text: e.target.value } : { comment: e.target.value }, false)}
+            />
+          </label>
+        )}
+        {showText && annotating && (
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-slate-500">Size</span>
+            <input type="number" className="input w-20 py-1" min={4} max={200} value={current.font_size} onChange={(e) => setStyleValue({ font_size: Math.max(4, Number(e.target.value) || 4) })} />
+          </label>
+        )}
+        {showText && !annotating && (
           <>
             <label className="flex flex-col gap-1">
               <span className="text-xs text-slate-500">Font</span>
@@ -342,7 +393,7 @@ export function PdfEditor({ file, values, onChange }: { file: File; values: Opti
         onPage={(p) => (setPage(p), setSelected(null), setEditing(false))}
         footer={
           <span className="text-xs text-slate-500">
-            {objects.length ? `${objects.length} change${objects.length > 1 ? "s" : ""} · double-click text to edit it` : "Pick a tool, then click or drag on the page."}
+            {objects.length ? `${objects.length} ${noun}${objects.length > 1 ? "s" : ""} · double-click text to edit it` : "Pick a tool, then click or drag on the page."}
           </span>
         }
       >
@@ -438,6 +489,24 @@ function Shape({ o, W, H }: { o: EditObject; W: number; H: number }) {
       return <ellipse cx={x + w / 2} cy={y + h / 2} rx={w / 2} ry={h / 2} fill={o.fill ?? "transparent"} stroke={sw > 0 ? stroke : "none"} strokeWidth={sw} {...common} />;
     case "highlight":
       return <rect x={x} y={y} width={w} height={h} fill={o.fill || "#FDE047"} opacity={Math.min(o.opacity ?? 1, 0.4)} />;
+    case "underline":
+    case "strikeout": {
+      const ly = o.type === "underline" ? y + h - 1 : y + h / 2;
+      return (
+        <g {...common}>
+          <rect x={x} y={y} width={w} height={h} fill="transparent" />
+          <line x1={x} y1={ly} x2={x + w} y2={ly} stroke={stroke} strokeWidth={Math.max(1, h / 12)} />
+        </g>
+      );
+    }
+    case "note":
+      return (
+        <g {...common}>
+          <rect x={x} y={y} width={w} height={h} rx={3} fill="#FDE68A" stroke="#D97706" strokeWidth={1} />
+          <path d={`M${x + w * 0.25} ${y + h * 0.35} H${x + w * 0.75} M${x + w * 0.25} ${y + h * 0.55} H${x + w * 0.65}`} stroke="#92400E" strokeWidth={1.2} />
+          <title>{o.text || "Note"}</title>
+        </g>
+      );
     case "whiteout":
       return <rect x={x} y={y} width={w} height={h} fill={o.fill || "#FFFFFF"} stroke="#cbd5e1" strokeDasharray="2 2" strokeWidth={0.5} {...common} />;
     case "line":

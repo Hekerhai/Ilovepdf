@@ -18,6 +18,7 @@ from app.infra.storage import LocalStorage, S3Storage
 from app.infra.webhooks import WebhookSender
 from app.services.auth import AuthService
 from app.services.billing import BillingService
+from app.services.documents import DocumentService
 from app.services.esign import ESignService
 from app.services.jobs import JobService
 from app.services.privacy import PrivacyService
@@ -45,6 +46,7 @@ class Container:
     billing: BillingService
     privacy: PrivacyService
     esign: ESignService
+    documents: DocumentService
     limiter: MemoryRateLimiter | RedisRateLimiter
 
 
@@ -148,6 +150,15 @@ def build_container(settings: Settings | None = None) -> Container:
             brand_name=s.brand_name,
             work_root=s.work_dir,
             retention_days=s.esign_retention_days,
+        ),
+        documents=DocumentService(
+            db=db,
+            storage=storage,
+            mailer=mailer,
+            jobs=jobs,
+            secret_key=s.secret_key,
+            public_url=s.public_url,
+            brand_name=s.brand_name,
         ),
         limiter=MemoryRateLimiter() if s.queue_mode == "inline" else RedisRateLimiter(s.redis_url),
     )

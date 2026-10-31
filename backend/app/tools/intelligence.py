@@ -123,3 +123,42 @@ class AskPdfTool(_AITool):
         out = ctx.output_path("answer.md")
         out.write_text(answer, encoding="utf-8")
         return [out]
+
+
+@register
+class QuestionGeneratorTool(_AITool):
+    id = "ai_questions"
+    name = "AI Question Generator"
+    description = "Turn study notes, a chapter or a manual into quiz questions with an answer key."
+
+    class Options(ToolOptions):
+        count: int = Field(10, ge=3, le=50, description="How many questions")
+        kind: Literal["multiple_choice", "true_false", "short_answer", "mixed"] = "multiple_choice"
+        difficulty: Literal["easy", "medium", "hard"] = "medium"
+        language: str = Field("English", max_length=40)
+
+    KINDS = {
+        "multiple_choice": "multiple-choice questions with four options (A to D), exactly one correct",
+        "true_false": "true-or-false statements",
+        "short_answer": "short-answer questions",
+        "mixed": "a mix of multiple-choice, true-or-false and short-answer questions",
+    }
+
+    def run(self, inputs: list[Path], options: Options, ctx: ToolContext) -> list[Path]:
+        ai = _provider(ctx)
+        answer = ai.complete(
+            system=(
+                "You write fair exam questions that test understanding of the document provided. Every question and "
+                "answer must be supported by the document; never test trivia such as page numbers."
+            ),
+            prompt=(
+                f"Write {options.count} {self.KINDS[options.kind]} at {options.difficulty} difficulty, in "
+                f"{options.language}, based on the document below. Use Markdown: a numbered list of questions, "
+                "then a heading 'Answer key' with each answer and a one-sentence explanation that says where in the "
+                f"document it comes from.\n\n<document>\n{_document_text(inputs[0])}\n</document>"
+            ),
+            max_tokens=6000,
+        )
+        out = ctx.output_path(f"{stem(inputs[0])}-questions.md")
+        out.write_text(answer, encoding="utf-8")
+        return [out]

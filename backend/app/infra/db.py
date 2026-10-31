@@ -169,6 +169,43 @@ class Job(Base):
     webhook_status: Mapped[str | None] = mapped_column(String(16))  # pending | delivered | failed
 
 
+class Document(Base):
+    """A file the user chose to keep in their account. Unlike task files, these are not auto-deleted."""
+
+    __tablename__ = "documents"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    owner_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(300))
+    size: Mapped[int] = mapped_column(BigInteger)
+    content_type: Mapped[str] = mapped_column(String(120))
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+    shares: Mapped[list["ShareLink"]] = relationship(back_populates="document", cascade="all, delete-orphan")
+
+
+class ShareLink(Base):
+    """A link that lets anyone holding it view or download one document."""
+
+    __tablename__ = "share_links"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    document_id: Mapped[str] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"), index=True)
+    token: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    password_hash: Mapped[str | None] = mapped_column(String(255))
+    allow_download: Mapped[bool] = mapped_column(Boolean, default=True)
+    expires_at: Mapped[datetime | None]
+    max_downloads: Mapped[int | None] = mapped_column(Integer)
+    downloads: Mapped[int] = mapped_column(Integer, default=0)
+    views: Mapped[int] = mapped_column(Integer, default=0)
+    sent_to: Mapped[str | None] = mapped_column(String(320))
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    revoked_at: Mapped[datetime | None]
+
+    document: Mapped[Document] = relationship(back_populates="shares")
+
+
 MIGRATION_LOCK = 0x466F6C696F  # "Folio"
 
 

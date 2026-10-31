@@ -194,3 +194,95 @@ def test_fill_a_form_made_in_the_browser(tmp_path):
     with pikepdf.open(filled) as pdf:
         f = pikepdf.form.Form(pdf)
         assert (str(f["size"].value), str(f["plan"].value), str(f["full_name"].value)) == ("/1", "Pro", "Zoë Ω")
+
+
+@pytest.mark.parametrize("angle", [0, 90, 270])
+def test_annotations_land_where_the_reader_sees_them(tmp_path, pdf3, angle):
+    import pymupdf
+
+    [rotated] = run("rotate", [pdf3], tmp_path, angle=angle) if angle else [pdf3]
+    box = {"x": 0.1, "y": 0.1, "width": 0.25, "height": 0.1}
+    objects = [
+        {"type": "rect", "page": 1, "fill": "#000000", "color": "#000000", "comment": "Check this", **box},
+        {"type": "note", "page": 1, "x": 0.8, "y": 0.8, "text": "Looks good"},
+        {"type": "highlight", "page": 2, "x": 0.1, "y": 0.1, "width": 0.4, "height": 0.03},
+        {"type": "underline", "page": 2, "x": 0.1, "y": 0.2, "width": 0.4, "height": 0.03},
+        {"type": "strikeout", "page": 2, "x": 0.1, "y": 0.3, "width": 0.4, "height": 0.03},
+        {"type": "text", "page": 2, "x": 0.1, "y": 0.5, "text": "Free text"},
+        {"type": "arrow", "page": 3, "x": 0.1, "y": 0.1, "x2": 0.5, "y2": 0.5},
+        {"type": "ellipse", "page": 3, "x": 0.5, "y": 0.6, "width": 0.2, "height": 0.1},
+        {"type": "draw", "page": 3, "x": 0, "y": 0, "points": [[0.1, 0.8], [0.2, 0.85], [0.3, 0.8]]},
+    ]
+    [out] = run("annotate_pdf", [rotated], tmp_path, objects=objects, author="Ada")
+    assert dark_fraction(out, 0, (0.12, 0.12, 0.33, 0.18)) > 0.9
+    elsewhere = (0.4, 0.3, 0.7, 0.7)
+    assert dark_fraction(out, 0, elsewhere) == dark_fraction(rotated, 0, elsewhere)
+    doc = pymupdf.open(out)
+    kinds = [[a.type[1] for a in page.annots()] for page in doc]
+    assert kinds == [["Square", "Text"], ["Highlight", "Underline", "StrikeOut", "FreeText"], ["Line", "Circle", "Ink"]]
+    first = next(doc[0].annots())
+    assert first.info["content"] == "Check this" and first.info["title"] == "Ada"
+    assert "Free text" in doc[1].get_text() or any(a.info["content"] == "Free text" for a in doc[1].annots())
+
+
+def test_accessibility_check_and_fix(tmp_path, pdf3):
+    import zipfile
+
+    [report] = run("accessibility_check", [pdf3], tmp_path)
+    text = report.read_text()
+    assert "| Document title | Fails |" in text and "| Language | Fails |" in text and "| Tags" in text
+    outputs = run("accessibility_check", [pdf3], tmp_path, fix_basics=True, language="en-GB")
+    fixed_pdf = next(p for p in outputs if p.suffix == ".pdf")
+    with pikepdf.open(fixed_pdf) as pdf:
+        assert str(pdf.Root.Lang) == "en-GB" and str(pdf.docinfo.Title) == "Heading 1"
+        assert pdf.Root.ViewerPreferences.DisplayDocTitle
+    [again] = run("accessibility_check", [fixed_pdf], tmp_path)
+    assert "| Document title | Pass |" in again.read_text() and "| Language | Pass |" in again.read_text()
+    assert zipfile  # (multi-output tasks are zipped by the job service)
+
+
+def test_ebook_and_zip_to_pdf(tmp_path, pdf3, pdf2):
+    import zipfile
+
+    import pymupdf
+
+    from tests.conftest import make_image
+
+    # A tiny EPUB built by hand: mimetype, container, package, one chapter.
+    epub = tmp_path / "book.epub"
+    with zipfile.ZipFile(epub, "w") as z:
+        z.writestr("mimetype", "application/epub+zip", compress_type=zipfile.ZIP_STORED)
+        z.writestr(
+            "META-INF/container.xml",
+            '<?xml version="1.0"?><container version="1.0" '
+            'xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile '
+            'full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>',
+        )
+        z.writestr(
+            "OEBPS/content.opf",
+            '<?xml version="1.0"?><package xmlns="http://www.idpf.org/2007/opf" '
+            'version="3.0" unique-identifier="id"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/">'
+            '<dc:identifier id="id">x</dc:identifier><dc:title>Tiny Book</dc:title><dc:language>en</dc:language>'
+            '</metadata><manifest><item id="c1" href="c1.xhtml" media-type="application/xhtml+xml"/></manifest>'
+            '<spine><itemref idref="c1"/></spine></package>',
+        )
+        z.writestr("OEBPS/c1.xhtml", '<?xml version="1.0"?><html xmlns="http://www.w3.org/1999/xhtml"><head>'
+                   "<title>One</title></head><body><h1>Chapter one</h1>" + "<p>It was a quiet morning.</p>" * 200
+                   + "</body></html>")  # fmt: skip
+    [book] = run("ebook_to_pdf", [epub], tmp_path, page_size="A5")
+    doc = pymupdf.open(book)
+    assert doc.page_count >= 2 and "Chapter one" in doc[0].get_text()
+    assert round(doc[0].rect.width) == 420  # A5
+
+    bundle = tmp_path / "bundle.zip"
+    with zipfile.ZipFile(bundle, "w") as z:
+        z.write(pdf3, "a/first.pdf")
+        z.write(make_image(tmp_path / "photo.png"), "b/photo.png")
+        z.write(epub, "c/book.epub")
+        z.writestr("../../evil.pdf", b"%PDF-1.4 not really")  # path tricks are ignored; it's just unreadable
+        z.writestr("notes.xyz", b"unknown type")
+    [merged] = run("zip_to_pdf", [bundle], tmp_path)
+    with pikepdf.open(merged) as pdf:
+        titles = [item.title for item in pdf.open_outline().root]
+    assert titles[:3] == ["first", "photo", "book"] and titles[-1] == "Files not included"
+    assert not (tmp_path.parent / "evil.pdf").exists()

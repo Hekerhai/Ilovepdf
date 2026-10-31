@@ -1,12 +1,13 @@
 "use client";
 
-import { ArrowRight, Check, Crown, Download, LoaderCircle, RotateCcw, Server, ShieldCheck, Trash2 } from "lucide-react";
+import { ArrowRight, Check, Crown, Download, FolderPlus, LoaderCircle, RotateCcw, Server, Share2, ShieldCheck, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { ApiError } from "@/lib/api";
 import { chooseEngine } from "@/lib/engines";
+import { type Doc, documents } from "@/lib/documents";
 import { downloadBlob, formatBytes } from "@/lib/format";
 import { handOff, takeHandOff } from "@/lib/handoff";
 import { acceptsPdf, catalog } from "@/lib/tools";
@@ -14,6 +15,7 @@ import type { ToolInfo, ToolResult } from "@/lib/types";
 
 import { useSession } from "./AppProviders";
 import { ChatPanel } from "./ChatPanel";
+import { ShareDialog } from "./DocumentsView";
 import { Dropzone } from "./Dropzone";
 import { FileList } from "./FileList";
 import { defaultOptions, OptionsForm, type OptionValues } from "./OptionsForm";
@@ -32,7 +34,7 @@ const NEXT_STEPS = ["edit_pdf", "compress", "protect", "watermark", "page_number
 
 /** Tools whose main input comes from an on-page widget; the run button waits until there is something to apply. */
 function hasWidgetInput(toolId: string, values: OptionValues): boolean {
-  if (toolId === "edit_pdf") return ((values.objects as unknown[]) ?? []).length > 0;
+  if (toolId === "edit_pdf" || toolId === "annotate_pdf") return ((values.objects as unknown[]) ?? []).length > 0;
   if (toolId === "create_forms") return ((values.fields as unknown[]) ?? []).length > 0;
   if (toolId === "fill_forms") return Object.keys((values.fields as object) ?? {}).length > 0;
   return true;
@@ -49,6 +51,17 @@ export function ToolWorkspace({ tool }: { tool: ToolInfo }) {
   useEffect(() => {
     const incoming = takeHandOff().filter((f) => tool.accepts.some((ext) => f.name.toLowerCase().endsWith(ext)));
     if (incoming.length) setFiles(incoming);
+    // "Open in…" from My documents.
+    const documentId = new URLSearchParams(window.location.search).get("document");
+    if (documentId) {
+      fetch(documents.fileUrl(documentId), { credentials: "same-origin" })
+        .then(async (r) => {
+          if (!r.ok) throw new Error("That document couldn't be opened.");
+          const name = decodeURIComponent(/filename\*=UTF-8''([^;]+)/.exec(r.headers.get("content-disposition") ?? "")?.[1] ?? "document.pdf");
+          setFiles([new File([await r.blob()], name, { type: r.headers.get("content-type") ?? "application/pdf" })]);
+        })
+        .catch((e) => setStatus({ phase: "error", message: e.message }));
+    }
   }, [tool]);
 
   const multiple = tool.max_files === null || tool.max_files > 1;
@@ -141,6 +154,8 @@ export function ToolWorkspace({ tool }: { tool: ToolInfo }) {
                   <SignWidget file={files[0]} values={values} onChange={setValues} />
                 ) : tool.id === "edit_pdf" && files[0] ? (
                   <PdfEditor file={files[0]} values={values} onChange={setValues} />
+                ) : tool.id === "annotate_pdf" && files[0] ? (
+                  <PdfEditor key="annotate" mode="annotate" file={files[0]} values={values} onChange={setValues} />
                 ) : tool.id === "create_forms" && files[0] ? (
                   <FormBuilder file={files[0]} values={values} onChange={setValues} />
                 ) : tool.id === "fill_forms" && files[0] ? (
@@ -227,8 +242,26 @@ function ResultPanel({
   onReset: () => void;
   onContinue: (toolId: string) => void;
 }) {
+  const { user } = useSession();
   const [deleted, setDeleted] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
+  const [kept, setKept] = useState<Doc | null>(null);
+  const [keeping, setKeeping] = useState(false);
+  const [keepError, setKeepError] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
+
+  async function keep() {
+    setKeeping(true);
+    setKeepError(null);
+    try {
+      const doc = result.job && !deleted ? await documents.fromJob(result.job.id) : (await documents.upload([{ blob: result.blob, name: result.name }])).documents[0];
+      setKept(doc);
+    } catch (e) {
+      setKeepError((e as Error).message);
+    } finally {
+      setKeeping(false);
+    }
+  }
   const saved = tool.id === "compress" && inputBytes > 0 ? 1 - result.blob.size / inputBytes : null;
   const isPdf = result.name.toLowerCase().endsWith(".pdf");
   const isText = /\.(md|txt)$/i.test(result.name);
@@ -277,11 +310,36 @@ function ResultPanel({
               <Trash2 className="h-4 w-4" /> Delete from server now
             </button>
           )}
+          {user ? (
+            kept ? (
+              <>
+                <Link href="/documents" className="btn-secondary">
+                  <Check className="h-4 w-4" /> Saved to My documents
+                </Link>
+                <button className="btn-secondary" onClick={() => setSharing(true)}>
+                  <Share2 className="h-4 w-4" /> Share
+                </button>
+              </>
+            ) : (
+              <button className="btn-secondary" disabled={keeping} onClick={keep} title="Keep a copy in your account. Task files are deleted automatically; saved documents are not.">
+                <FolderPlus className="h-4 w-4" /> {keeping ? "Saving…" : "Save to My documents"}
+              </button>
+            )
+          ) : (
+            <Link href="/login" className="btn-ghost">
+              <FolderPlus className="h-4 w-4" /> Sign in to save or share
+            </Link>
+          )}
           <button className="btn-ghost" onClick={onReset}>
             <RotateCcw className="h-4 w-4" /> Start over
           </button>
         </div>
+        {keepError && <p className="mt-3 text-sm text-rose-600">{keepError}</p>}
+        {result.where === "browser" && user && !kept && (
+          <p className="mt-2 text-xs text-slate-500">Saving uploads this result to your account. Nothing is uploaded unless you choose to.</p>
+        )}
       </div>
+      {sharing && kept && <ShareDialog doc={kept} onClose={() => setSharing(false)} />}
       {preview !== null && (
         <pre className="card mt-6 max-h-96 overflow-auto whitespace-pre-wrap p-5 text-sm">{preview}</pre>
       )}

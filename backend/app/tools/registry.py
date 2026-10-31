@@ -36,8 +36,8 @@ class ToolRegistry:
         return tool_id in self._tools
 
 
-MODULE_ORDER = ["organize", "optimize", "convert_to", "convert_from", "edit", "editor", "security", "signatures",
-                "intelligence"]  # fmt: skip
+MODULE_ORDER = ["organize", "optimize", "accessibility", "convert_to", "convert_from", "edit", "editor", "security",
+                "signatures", "intelligence"]  # fmt: skip
 
 _default = ToolRegistry()
 
@@ -50,6 +50,7 @@ def register(cls: type[Tool]) -> type[Tool]:
 def default_registry() -> ToolRegistry:
     # Importing the modules runs their @register decorators.
     from app.tools import (  # noqa: F401
+        accessibility,
         convert_from,
         convert_to,
         edit,

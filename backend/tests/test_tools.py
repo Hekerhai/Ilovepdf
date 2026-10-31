@@ -318,3 +318,21 @@ def test_web_catalog_snapshot_is_current():
     if not snapshot.exists():
         pytest.skip("frontend not present")
     assert json.loads(snapshot.read_text()) == json.loads(json.dumps(catalog())), "run: python -m app.tools.export"
+
+
+def test_question_generator_prompt(tmp_path, pdf3):
+    seen = {}
+
+    class Fake:
+        available = True
+
+        def complete(self, *, system, prompt, max_tokens=2048):
+            seen["prompt"] = prompt
+            return "1. Question?\n\n## Answer key\n\n1. Answer."
+
+    tool = REG.get("ai_questions")
+    ctx = ToolContext(work_dir=tmp_path, ai=Fake())
+    [out] = tool.run([pdf3], tool.Options(count=5, kind="true_false", language="Hindi"), ctx)
+    assert out.name == "doc-questions.md" and "Answer key" in out.read_text()
+    assert "5 true-or-false statements" in seen["prompt"] and "in Hindi" in seen["prompt"]
+    assert "Hello page 1" in seen["prompt"]

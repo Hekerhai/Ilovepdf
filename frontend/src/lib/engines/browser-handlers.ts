@@ -316,7 +316,8 @@ async function toPng(file: File): Promise<Uint8Array> {
 // ---- Edit PDF ---------------------------------------------------------------------------------------------------
 
 export type EditObject = {
-  type: "text" | "image" | "rect" | "ellipse" | "line" | "arrow" | "highlight" | "whiteout" | "draw";
+  // underline, strikeout and note exist only as annotations (Annotate PDF), never drawn into the page.
+  type: "text" | "image" | "rect" | "ellipse" | "line" | "arrow" | "highlight" | "whiteout" | "draw" | "underline" | "strikeout" | "note";
   page: number;
   x: number;
   y: number;
@@ -335,6 +336,8 @@ export type EditObject = {
   stroke_width?: number;
   opacity?: number;
   image?: string | null;
+  /** Annotate PDF: the comment shown in the reader's comments panel. */
+  comment?: string | null;
 };
 
 // Must match backend/app/tools/editor.py so text lands in the same place on both engines.

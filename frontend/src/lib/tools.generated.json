@@ -734,6 +734,40 @@
    }
   },
   {
+   "id": "accessibility_check",
+   "name": "Accessibility check",
+   "description": "Check how well a PDF works with screen readers, get plain fixes, and fix the basics automatically.",
+   "category": "optimize",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": 1,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": false,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "fix_basics": {
+      "default": false,
+      "description": "Also return a copy with title, language and display settings fixed",
+      "title": "Fix Basics",
+      "type": "boolean"
+     },
+     "language": {
+      "default": "en",
+      "description": "Language code to set when fixing, e.g. en-GB, de, hi",
+      "maxLength": 20,
+      "title": "Language",
+      "type": "string"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
    "id": "images_to_pdf",
    "name": "JPG to PDF",
    "description": "Turn photos and scans (JPG, PNG, WebP, TIFF...) into a PDF.",
@@ -872,14 +906,17 @@
   {
    "id": "word_to_pdf",
    "name": "Word to PDF",
-   "description": "Convert DOC, DOCX, ODT and RTF documents to PDF.",
+   "description": "Convert Word, OpenDocument, RTF, text and Apple Pages documents to PDF.",
    "category": "convert_to_pdf",
    "accepts": [
     ".doc",
     ".docx",
     ".odt",
     ".rtf",
-    ".txt"
+    ".txt",
+    ".pages",
+    ".wpd",
+    ".wps"
    ],
    "min_files": 1,
    "max_files": null,
@@ -896,14 +933,15 @@
   {
    "id": "powerpoint_to_pdf",
    "name": "PowerPoint to PDF",
-   "description": "Convert PPT, PPTX and ODP presentations to PDF.",
+   "description": "Convert PowerPoint, OpenDocument and Apple Keynote presentations to PDF.",
    "category": "convert_to_pdf",
    "accepts": [
     ".ppt",
     ".pptx",
     ".odp",
     ".pps",
-    ".ppsx"
+    ".ppsx",
+    ".key"
    ],
    "min_files": 1,
    "max_files": null,
@@ -920,13 +958,14 @@
   {
    "id": "excel_to_pdf",
    "name": "Excel to PDF",
-   "description": "Convert XLS, XLSX, ODS and CSV spreadsheets to PDF.",
+   "description": "Convert Excel, OpenDocument, CSV and Apple Numbers spreadsheets to PDF.",
    "category": "convert_to_pdf",
    "accepts": [
     ".xls",
     ".xlsx",
     ".ods",
-    ".csv"
+    ".csv",
+    ".numbers"
    ],
    "min_files": 1,
    "max_files": null,
@@ -969,6 +1008,95 @@
       "default": null,
       "description": "A public web address, used when no file is uploaded",
       "title": "Url"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "ebook_to_pdf",
+   "name": "Ebook to PDF",
+   "description": "Convert EPUB, MOBI, FB2, XPS and CBZ comic files to PDF, keeping the table of contents.",
+   "category": "convert_to_pdf",
+   "accepts": [
+    ".epub",
+    ".mobi",
+    ".fb2",
+    ".xps",
+    ".oxps",
+    ".cbz"
+   ],
+   "min_files": 1,
+   "max_files": null,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "page_size": {
+      "default": "A4",
+      "description": "Page size for reflowed books",
+      "enum": [
+       "A4",
+       "Letter",
+       "A5"
+      ],
+      "title": "Page Size",
+      "type": "string"
+     },
+     "font_size": {
+      "default": 11,
+      "description": "Text size for reflowed books, in points",
+      "maximum": 24,
+      "minimum": 6,
+      "title": "Font Size",
+      "type": "number"
+     }
+    },
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "zip_to_pdf",
+   "name": "ZIP to PDF",
+   "description": "Convert every PDF, image, Office file and ebook inside a ZIP and combine them into one PDF.",
+   "category": "convert_to_pdf",
+   "accepts": [
+    ".zip"
+   ],
+   "min_files": 1,
+   "max_files": 1,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "bookmarks": {
+      "default": true,
+      "description": "Add a bookmark for each file",
+      "title": "Bookmarks",
+      "type": "boolean"
+     },
+     "list_skipped": {
+      "default": true,
+      "description": "End with a page naming files that couldn't be converted",
+      "title": "List Skipped",
+      "type": "boolean"
+     },
+     "page_size": {
+      "default": "A4",
+      "description": "Page size for images and ebooks",
+      "enum": [
+       "fit",
+       "A4",
+       "Letter"
+      ],
+      "title": "Page Size",
+      "type": "string"
      }
     },
     "title": "Options",
@@ -2300,6 +2428,231 @@
    }
   },
   {
+   "id": "annotate_pdf",
+   "name": "Annotate PDF",
+   "description": "Add comments, sticky notes, highlights, underlines, strike-outs, shapes and ink any reader shows.",
+   "category": "edit",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": 1,
+   "premium": false,
+   "browser_capable": false,
+   "produces_pdf": true,
+   "options_schema": {
+    "$defs": {
+     "Annotation": {
+      "description": "A real PDF annotation: readers list it in their comments panel, and people can reply to it or delete it.",
+      "properties": {
+       "type": {
+        "enum": [
+         "note",
+         "highlight",
+         "underline",
+         "strikeout",
+         "text",
+         "rect",
+         "ellipse",
+         "line",
+         "arrow",
+         "draw"
+        ],
+        "title": "Type",
+        "type": "string"
+       },
+       "page": {
+        "minimum": 1,
+        "title": "Page",
+        "type": "integer"
+       },
+       "x": {
+        "maximum": 2,
+        "minimum": -1,
+        "title": "X",
+        "type": "number"
+       },
+       "y": {
+        "maximum": 2,
+        "minimum": -1,
+        "title": "Y",
+        "type": "number"
+       },
+       "width": {
+        "default": 0,
+        "maximum": 2,
+        "minimum": 0,
+        "title": "Width",
+        "type": "number"
+       },
+       "height": {
+        "default": 0,
+        "maximum": 2,
+        "minimum": 0,
+        "title": "Height",
+        "type": "number"
+       },
+       "x2": {
+        "anyOf": [
+         {
+          "type": "number"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "default": null,
+        "title": "X2"
+       },
+       "y2": {
+        "anyOf": [
+         {
+          "type": "number"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "default": null,
+        "title": "Y2"
+       },
+       "points": {
+        "anyOf": [
+         {
+          "items": {
+           "maxItems": 2,
+           "minItems": 2,
+           "prefixItems": [
+            {
+             "type": "number"
+            },
+            {
+             "type": "number"
+            }
+           ],
+           "type": "array"
+          },
+          "type": "array"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "default": null,
+        "title": "Points"
+       },
+       "text": {
+        "anyOf": [
+         {
+          "maxLength": 5000,
+          "type": "string"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "default": null,
+        "description": "Free text, or the note's comment",
+        "title": "Text"
+       },
+       "comment": {
+        "anyOf": [
+         {
+          "maxLength": 5000,
+          "type": "string"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "default": null,
+        "description": "Comment shown in the reader's comments panel",
+        "title": "Comment"
+       },
+       "font_size": {
+        "default": 12,
+        "exclusiveMinimum": 1,
+        "maximum": 200,
+        "title": "Font Size",
+        "type": "number"
+       },
+       "color": {
+        "default": "#111827",
+        "title": "Color",
+        "type": "string"
+       },
+       "fill": {
+        "anyOf": [
+         {
+          "type": "string"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "default": null,
+        "title": "Fill"
+       },
+       "stroke_width": {
+        "default": 2,
+        "maximum": 50,
+        "minimum": 0,
+        "title": "Stroke Width",
+        "type": "number"
+       },
+       "opacity": {
+        "default": 1,
+        "maximum": 1,
+        "minimum": 0,
+        "title": "Opacity",
+        "type": "number"
+       }
+      },
+      "required": [
+       "type",
+       "page",
+       "x",
+       "y"
+      ],
+      "title": "Annotation",
+      "type": "object"
+     }
+    },
+    "additionalProperties": false,
+    "properties": {
+     "objects": {
+      "description": "The annotations to add",
+      "items": {
+       "$ref": "#/$defs/Annotation"
+      },
+      "maxItems": 2000,
+      "minItems": 1,
+      "title": "Objects",
+      "type": "array"
+     },
+     "author": {
+      "anyOf": [
+       {
+        "maxLength": 100,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Name shown on each comment",
+      "title": "Author"
+     }
+    },
+    "required": [
+     "objects"
+    ],
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
    "id": "protect",
    "name": "Protect PDF",
    "description": "Encrypt with a password (AES-256) and control printing, copying and editing.",
@@ -2834,6 +3187,62 @@
     "required": [
      "question"
     ],
+    "title": "Options",
+    "type": "object"
+   }
+  },
+  {
+   "id": "ai_questions",
+   "name": "AI Question Generator",
+   "description": "Turn study notes, a chapter or a manual into quiz questions with an answer key.",
+   "category": "intelligence",
+   "accepts": [
+    ".pdf"
+   ],
+   "min_files": 1,
+   "max_files": 1,
+   "premium": true,
+   "browser_capable": false,
+   "produces_pdf": false,
+   "options_schema": {
+    "additionalProperties": false,
+    "properties": {
+     "count": {
+      "default": 10,
+      "description": "How many questions",
+      "maximum": 50,
+      "minimum": 3,
+      "title": "Count",
+      "type": "integer"
+     },
+     "kind": {
+      "default": "multiple_choice",
+      "enum": [
+       "multiple_choice",
+       "true_false",
+       "short_answer",
+       "mixed"
+      ],
+      "title": "Kind",
+      "type": "string"
+     },
+     "difficulty": {
+      "default": "medium",
+      "enum": [
+       "easy",
+       "medium",
+       "hard"
+      ],
+      "title": "Difficulty",
+      "type": "string"
+     },
+     "language": {
+      "default": "English",
+      "maxLength": 40,
+      "title": "Language",
+      "type": "string"
+     }
+    },
     "title": "Options",
     "type": "object"
    }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Crown, LogOut, Menu, User as UserIcon, X } from "lucide-react";
+import { Crown, FolderOpen, LogOut, Menu, User as UserIcon, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -14,6 +14,7 @@ const NAV = [
   { href: "/#tools", label: "All tools" },
   { href: "/workflows", label: "Workflows" },
   { href: "/esign", label: "eSign" },
+  { href: "/reader", label: "Reader" },
   { href: "/developers", label: "API" },
   { href: "/pricing", label: "Pricing" },
 ];
@@ -52,6 +53,9 @@ export function Header() {
                   <Crown className="h-4 w-4 text-amber-500" /> Upgrade
                 </Link>
               )}
+              <Link href="/documents" className="btn-ghost px-3 py-2" title="My documents" aria-label="My documents">
+                <FolderOpen className="h-4 w-4" />
+              </Link>
               <Link href="/account" className="btn-ghost px-3 py-2">
                 <UserIcon className="h-4 w-4" /> {user.name || user.email}
                 {premium && <span className="chip border-amber-300 bg-amber-50 text-amber-700">{plan?.name}</span>}
@@ -84,6 +88,9 @@ export function Header() {
           ))}
           {user ? (
             <>
+              <Link href="/documents" className="block py-2" onClick={() => setOpen(false)}>
+                My documents
+              </Link>
               <Link href="/account" className="block py-2" onClick={() => setOpen(false)}>
                 Account
               </Link>

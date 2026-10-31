@@ -10,6 +10,7 @@ from app.domain.ports import FileStorage
 from app.infra.db import (
     ApiKey,
     Database,
+    Document,
     Job,
     LoginToken,
     Membership,
@@ -65,6 +66,15 @@ class PrivacyService:
                     }
                     for j in session.scalars(select(Job).where(Job.user_id == user_id))
                 ],
+                "documents": [
+                    {
+                        "name": d.name,
+                        "size": d.size,
+                        "created_at": d.created_at.isoformat(),
+                        "share_links": len(d.shares),
+                    }
+                    for d in session.scalars(select(Document).where(Document.owner_id == user_id))
+                ],
                 "signature_requests": [
                     {
                         "title": r.title,
@@ -103,6 +113,9 @@ class PrivacyService:
             for job_id in session.scalars(select(Job.id).where(Job.user_id == user_id)):
                 self.storage.delete_prefix(f"jobs/{job_id}/")
             session.execute(delete(Job).where(Job.user_id == user_id))
+            self.storage.delete_prefix(f"docs/{user_id}/")
+            for document in session.scalars(select(Document).where(Document.owner_id == user_id)):
+                session.delete(document)  # with its share links
             for request in session.scalars(select(SignatureRequest).where(SignatureRequest.owner_id == user_id)):
                 self.storage.delete_prefix(f"esign/{request.id}/")
                 session.delete(request)

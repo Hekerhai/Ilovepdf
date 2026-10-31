@@ -509,3 +509,130 @@ def _state_name(option: str, index: int) -> str:
     """A PDF name for a radio option: its text when that is a safe name, otherwise its position."""
     safe = "".join(ch for ch in option if ch.isalnum() or ch in "-_.")
     return safe or f"Choice{index + 1}"
+
+
+# ---- Annotate ----------------------------------------------------------------------------------------------------
+
+AnnotType = Literal["note", "highlight", "underline", "strikeout", "text", "rect", "ellipse", "line", "arrow", "draw"]
+
+
+class Annotation(BaseModel):
+    """A real PDF annotation: readers list it in their comments panel, and people can reply to it or delete it."""
+
+    model_config = ConfigDict(extra="ignore")  # the editor sends styling fields some types don't use
+
+    type: AnnotType
+    page: int = Field(..., ge=1)
+    x: float = Field(..., ge=-1, le=2)
+    y: float = Field(..., ge=-1, le=2)
+    width: float = Field(0, ge=0, le=2)
+    height: float = Field(0, ge=0, le=2)
+    x2: float | None = None
+    y2: float | None = None
+    points: list[tuple[float, float]] | None = None
+    text: str | None = Field(None, max_length=5000, description="Free text, or the note's comment")
+    comment: str | None = Field(None, max_length=5000, description="Comment shown in the reader's comments panel")
+    font_size: float = Field(12, gt=1, le=200)
+    color: str = "#111827"
+    fill: str | None = None
+    stroke_width: float = Field(2, ge=0, le=50)
+    opacity: float = Field(1, ge=0, le=1)
+
+
+def _rgb(hex_color: str | None) -> tuple[float, float, float] | None:
+    if not hex_color:
+        return None
+    c = color(hex_color)
+    return (c.red, c.green, c.blue)
+
+
+@register
+class AnnotatePdfTool(Tool):
+    id = "annotate_pdf"
+    name = "Annotate PDF"
+    description = "Add comments, sticky notes, highlights, underlines, strike-outs, shapes and ink any reader shows."
+    category = Category.EDIT
+    max_files = 1
+
+    class Options(ToolOptions):
+        objects: list[Annotation] = Field(..., min_length=1, max_length=2000, description="The annotations to add")
+        author: str | None = Field(None, max_length=100, description="Name shown on each comment")
+
+    def run(self, inputs: list[Path], options: Options, ctx: ToolContext) -> list[Path]:
+        import pymupdf
+
+        doc = pymupdf.open(inputs[0])
+        try:
+            if doc.needs_pass:
+                raise ValidationFailed("This PDF is password protected. Unlock it first.")
+            for obj in options.objects:
+                if obj.page > doc.page_count:
+                    raise ValidationFailed(f"Page {obj.page} doesn't exist; this PDF has {doc.page_count}.")
+                self._add(doc[obj.page - 1], obj, options.author)
+            out = ctx.output_path(f"{stem(inputs[0])}-annotated.pdf")
+            doc.save(out, garbage=3, deflate=True)
+            return [out]
+        finally:
+            doc.close()
+
+    @staticmethod
+    def _add(page, o: Annotation, author: str | None) -> None:
+        import pymupdf
+
+        vw, vh = page.rect.width, page.rect.height
+        to_page = page.derotation_matrix
+
+        def point(fx: float, fy: float):
+            return pymupdf.Point(fx * vw, fy * vh) * to_page
+
+        def rect(fx: float, fy: float, fw: float, fh: float):
+            r = pymupdf.Rect(point(fx, fy), point(fx + fw, fy + fh))
+            r.normalize()
+            return r
+
+        stroke = _rgb(o.color)
+        if o.type == "note":
+            annot = page.add_text_annot(point(o.x, o.y), o.text or o.comment or "", icon="Comment")
+        elif o.type in ("highlight", "underline", "strikeout"):
+            add = {"highlight": page.add_highlight_annot, "underline": page.add_underline_annot,
+                   "strikeout": page.add_strikeout_annot}[o.type]  # fmt: skip
+            annot = add(rect(o.x, o.y, o.width, o.height))
+            if o.type == "highlight":
+                stroke = _rgb(o.fill or "#FDE047")
+        elif o.type == "text":
+            lines = (o.text or "").split("\n")
+            width = o.width or max(len(line) for line in lines) * o.font_size * 0.55 / vw + 0.01
+            height = o.height or len(lines) * o.font_size * 1.25 / vh + 0.005
+            annot = page.add_freetext_annot(
+                rect(o.x, o.y, width, height),
+                o.text or "",
+                fontsize=o.font_size,
+                text_color=stroke,
+                fill_color=_rgb(o.fill),
+                rotate=page.rotation,
+            )
+            stroke = None
+        elif o.type in ("rect", "ellipse"):
+            add = page.add_rect_annot if o.type == "rect" else page.add_circle_annot
+            annot = add(rect(o.x, o.y, o.width, o.height))
+        elif o.type in ("line", "arrow"):
+            end = point(o.x if o.x2 is None else o.x2, o.y if o.y2 is None else o.y2)
+            annot = page.add_line_annot(point(o.x, o.y), end)
+            if o.type == "arrow":
+                annot.set_line_ends(pymupdf.PDF_ANNOT_LE_NONE, pymupdf.PDF_ANNOT_LE_OPEN_ARROW)
+        else:  # ink
+            if not o.points or len(o.points) < 2:
+                raise ValidationFailed("A drawing needs at least two points.")
+            annot = page.add_ink_annot([[tuple(point(px, py)) for px, py in o.points]])
+
+        if stroke is not None:
+            fill = _rgb(o.fill) if o.type in ("rect", "ellipse") else None
+            annot.set_colors(stroke=stroke, fill=fill)
+        if o.type in ("rect", "ellipse", "line", "arrow", "draw"):
+            annot.set_border(width=o.stroke_width)
+        annot.set_opacity(min(o.opacity, 0.5) if o.type == "highlight" and o.opacity == 1 else o.opacity)
+        info = {"title": author or "Folio"}
+        if o.comment and o.type != "note":
+            info["content"] = o.comment
+        annot.set_info(**info)
+        annot.update()

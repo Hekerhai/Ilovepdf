@@ -13,5 +13,45 @@
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }
+  ],
+  "share_target": {
+    "action": "/reader/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [
+        {
+          "name": "file",
+          "accept": [
+            "application/pdf",
+            ".pdf"
+          ]
+        }
+      ]
+    }
+  },
+  "file_handlers": [
+    {
+      "action": "/reader",
+      "accept": {
+        "application/pdf": [
+          ".pdf"
+        ]
+      }
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "PDF Reader",
+      "url": "/reader"
+    },
+    {
+      "name": "My documents",
+      "url": "/documents"
+    },
+    {
+      "name": "Request signatures",
+      "url": "/esign/new"
+    }
   ]
 }

@@ -15,6 +15,7 @@ export const CUSTOM_FIELDS: Record<string, string[]> = {
   redact: ["areas"],
   ai_chat: ["question", "history"],
   edit_pdf: ["objects"],
+  annotate_pdf: ["objects"],
   fill_forms: ["fields"],
   create_forms: ["fields"],
   digital_sign: ["certificate"],
