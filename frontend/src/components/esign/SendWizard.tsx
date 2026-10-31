@@ -1,15 +1,15 @@
 "use client";
 
-import { Calendar, CaseSensitive, Check, MousePointer2, PenLine, Plus, Send, SquareCheck, Trash2, Type, User } from "lucide-react";
+import { BookmarkPlus, Calendar, CaseSensitive, Check, KeyRound, MousePointer2, PenLine, Plus, Send, SquareCheck, Trash2, Type, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Dropzone } from "@/components/Dropzone";
 import { clamp, dragBox, fractionAt, PageStage, usePdfPage } from "@/components/widgets/stage";
 import { esign, FIELD_LABELS, type FieldType, type SignField, signerColour } from "@/lib/esign";
 
-type Person = { name: string; email: string };
+type Person = { name: string; email: string; code?: string; role?: string };
 type Drag = { mode: "move" | "resize"; index: number; origin: [number, number]; start: SignField };
 
 const TOOLS: { id: FieldType; icon: typeof PenLine; size: [number, number] }[] = [
@@ -33,10 +33,47 @@ export function SendWizard() {
   const [sequential, setSequential] = useState(false);
   const [days, setDays] = useState(14);
   const [fields, setFields] = useState<SignField[]>([]);
+  const [stampId, setStampId] = useState(true);
+  const [codes, setCodes] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [fromTemplate, setFromTemplate] = useState<string | null>(null);
+  const [saving, setSaving] = useState<{ name: string; roles: string[] } | null>(null);
+  const [saved, setSaved] = useState<string | null>(null);
 
-  const peopleOk = people.length > 0 && people.every((p) => p.name.trim() && EMAIL.test(p.email.trim()));
+  // /esign/new?template=<id> starts from a saved template: its PDF, fields and roles.
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("template");
+    if (!id) return;
+    esign
+      .template(id)
+      .then(async (t) => {
+        const doc = await esign.templateDocument(id, t.file_name);
+        setFile(doc);
+        setFields(t.fields);
+        setTitle(t.name);
+        setMessage(t.message ?? "");
+        setSequential(t.sequential);
+        setPeople(t.roles.map((role) => ({ name: "", email: "", role })));
+        setFromTemplate(t.name);
+        setStep(2);
+      })
+      .catch((e) => setError((e as Error).message));
+  }, []);
+
+  async function saveTemplate() {
+    if (!file || !saving) return;
+    setError(null);
+    try {
+      await esign.saveTemplate(file, { name: saving.name.trim(), roles: saving.roles.map((r) => r.trim()), fields, message: message.trim(), sequential });
+      setSaved(saving.name.trim());
+      setSaving(null);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  const peopleOk = people.length > 0 && people.every((p) => p.name.trim() && EMAIL.test(p.email.trim()) && (!codes || !p.code?.trim() || p.code.trim().length >= 4));
   const duplicate = new Set(people.map((p) => p.email.trim().toLowerCase())).size !== people.length;
   const missingSignature = people.findIndex((_, i) => !fields.some((f) => f.signer === i && (f.type === "signature" || f.type === "initials")));
 
@@ -48,10 +85,11 @@ export function SendWizard() {
       const sent = await esign.send(file, {
         title: title.trim() || file.name.replace(/\.pdf$/i, ""),
         message: message.trim(),
-        signers: people.map((p) => ({ name: p.name.trim(), email: p.email.trim() })),
+        signers: people.map((p) => ({ name: p.name.trim(), email: p.email.trim(), access_code: codes && p.code?.trim() ? p.code.trim() : null })),
         fields,
         sequential,
         expires_in_days: days,
+        stamp_id: stampId,
       });
       router.push(`/esign/${sent.id}?sent=1`);
     } catch (e) {
@@ -96,6 +134,7 @@ export function SendWizard() {
 
       {step === 2 && (
         <div className="card space-y-5 p-5">
+          {fromTemplate && <p className="rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-900 dark:bg-brand-900/30 dark:text-brand-100">Using the template “{fromTemplate}”. Add a person for each role; their fields are already placed.</p>}
           <label className="block">
             <span className="text-sm font-medium">Title</span>
             <input className="input mt-1" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} />
@@ -112,13 +151,15 @@ export function SendWizard() {
                 <div key={i} className="flex flex-wrap items-center gap-2">
                   <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: signerColour(i) }} aria-hidden />
                   {sequential && <span className="w-5 text-sm text-slate-500">{i + 1}.</span>}
+                  {p.role && <span className="w-24 truncate text-sm font-medium" title={p.role}>{p.role}</span>}
                   <input className="input min-w-40 flex-1" placeholder="Name" aria-label={`Signer ${i + 1} name`} value={p.name} onChange={(e) => setPeople(people.map((q, k) => (k === i ? { ...q, name: e.target.value } : q)))} />
                   <input className="input min-w-52 flex-1" type="email" placeholder="Email" aria-label={`Signer ${i + 1} email`} value={p.email} onChange={(e) => setPeople(people.map((q, k) => (k === i ? { ...q, email: e.target.value } : q)))} />
+                  {codes && <input className="input w-36" placeholder="Code (optional)" aria-label={`Signer ${i + 1} access code`} value={p.code ?? ""} maxLength={64} onChange={(e) => setPeople(people.map((q, k) => (k === i ? { ...q, code: e.target.value } : q)))} />}
                   <button
                     type="button"
                     className="btn-ghost px-2 py-2"
                     aria-label={`Remove signer ${i + 1}`}
-                    disabled={people.length === 1}
+                    disabled={people.length === 1 || !!fromTemplate}
                     onClick={() => {
                       setPeople(people.filter((_, k) => k !== i));
                       setFields(fields.filter((f) => f.signer !== i).map((f) => (f.signer > i ? { ...f, signer: f.signer - 1 } : f)));
@@ -129,7 +170,7 @@ export function SendWizard() {
                 </div>
               ))}
             </div>
-            {people.length < 20 && (
+            {people.length < 20 && !fromTemplate && (
               <button type="button" className="btn-ghost mt-2 px-3 py-1.5 text-sm" onClick={() => setPeople([...people, { name: "", email: "" }])}>
                 <Plus className="h-4 w-4" /> Add someone
               </button>
@@ -140,6 +181,23 @@ export function SendWizard() {
             <span className="text-sm font-medium">Message (optional)</span>
             <textarea className="input mt-1" rows={3} value={message} onChange={(e) => setMessage(e.target.value)} maxLength={2000} placeholder="Hi, please sign this by Friday." />
           </label>
+          <div className="space-y-2 text-sm">
+            <label className="flex items-start gap-2">
+              <input type="checkbox" className="mt-0.5" checked={codes} onChange={(e) => setCodes(e.target.checked)} />
+              <span>
+                <KeyRound className="mr-1 inline h-3.5 w-3.5" />
+                Ask for an access code
+                <span className="block text-slate-500">Give each person their code yourself, by phone or text. The email won&apos;t include it, so a forwarded email isn&apos;t enough to sign.</span>
+              </span>
+            </label>
+            <label className="flex items-start gap-2">
+              <input type="checkbox" className="mt-0.5" checked={stampId} onChange={(e) => setStampId(e.target.checked)} />
+              <span>
+                Print the request ID on every page
+                <span className="block text-slate-500">A small line in the bottom margin links each page to the audit trail.</span>
+              </span>
+            </label>
+          </div>
           <label className="flex items-center gap-2 text-sm">
             Link expires after
             <select className="input w-auto py-1" value={days} onChange={(e) => setDays(Number(e.target.value))}>
@@ -165,10 +223,43 @@ export function SendWizard() {
         <div className="space-y-4">
           <FieldPlacer file={file} people={people} fields={fields} onChange={setFields} />
           {error && <p className="text-sm text-rose-600">{error}</p>}
+          {saved && <p className="text-sm text-emerald-700 dark:text-emerald-400">Saved “{saved}”. Find it under Templates on the requests page.</p>}
+          {saving && (
+            <div className="card flex flex-wrap items-end gap-3 p-4 text-sm">
+              <label className="block">
+                <span className="font-medium">Template name</span>
+                <input className="input mt-1 w-56" value={saving.name} maxLength={200} onChange={(e) => setSaving({ ...saving, name: e.target.value })} />
+              </label>
+              {saving.roles.map((r, i) => (
+                <label key={i} className="block">
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: signerColour(i) }} /> Role {i + 1}
+                  </span>
+                  <input className="input mt-1 w-40" value={r} maxLength={100} onChange={(e) => setSaving({ ...saving, roles: saving.roles.map((x, k) => (k === i ? e.target.value : x)) })} />
+                </label>
+              ))}
+              <div className="flex gap-2">
+                <button type="button" className="btn-ghost" onClick={() => setSaving(null)}>
+                  Cancel
+                </button>
+                <button type="button" className="btn-secondary" disabled={!saving.name.trim() || saving.roles.some((r) => !r.trim())} onClick={saveTemplate}>
+                  Save template
+                </button>
+              </div>
+              <p className="w-full text-slate-500">Saves the PDF, the fields and the signing order. Names and emails aren&apos;t saved; you add people each time you use it.</p>
+            </div>
+          )}
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <button type="button" className="btn-ghost" onClick={() => setStep(2)}>
-              Back
-            </button>
+            <div className="flex gap-2">
+              <button type="button" className="btn-ghost" onClick={() => setStep(2)}>
+                Back
+              </button>
+              {!saving && (
+                <button type="button" className="btn-ghost" disabled={missingSignature >= 0} onClick={() => (setSaved(null), setSaving({ name: title.trim() || file.name.replace(/\.pdf$/i, ""), roles: people.map((p, i) => p.role || `Signer ${i + 1}`) }))}>
+                  <BookmarkPlus className="h-4 w-4" /> Save as template
+                </button>
+              )}
+            </div>
             <div className="flex items-center gap-3">
               {missingSignature >= 0 && <span className="text-sm text-slate-500">Add a signature field for {people[missingSignature].name}.</span>}
               <button type="button" className="btn-primary" disabled={missingSignature >= 0 || sending} onClick={send}>
@@ -252,7 +343,7 @@ function FieldPlacer({ file, people, fields, onChange }: { file: File; people: P
                 className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left ${signer === i ? "bg-slate-100 font-medium dark:bg-slate-800" : "hover:bg-slate-50 dark:hover:bg-slate-900"}`}
               >
                 <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: signerColour(i) }} />
-                <span className="truncate">{p.name}</span>
+                <span className="truncate">{p.role ? `${p.role} · ${p.name}` : p.name}</span>
                 <span className="ml-auto text-xs text-slate-400">{fields.filter((f) => f.signer === i).length}</span>
               </button>
             ))}

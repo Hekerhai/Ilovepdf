@@ -1,17 +1,21 @@
 "use client";
 
-import { CheckCircle2, Download, FileSignature, PenLine, X, XCircle } from "lucide-react";
+import { CheckCircle2, Download, FileSignature, KeyRound, PenLine, X, XCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { SignaturePad } from "@/components/widgets/SignWidget";
 import { PageStage, usePdfPage } from "@/components/widgets/stage";
-import { esign, FIELD_LABELS, type SignerView } from "@/lib/esign";
+import { esign, FIELD_LABELS, type LockedView, type SignerView } from "@/lib/esign";
 
 type Adopting = "signature" | "initials" | null;
 
 /** What someone sees when they open their signing link. No account needed: the link is the credential. */
 export function SignerPage({ token }: { token: string }) {
   const [view, setView] = useState<SignerView | null>(null);
+  const [locked, setLocked] = useState<LockedView | null>(null);
+  const [code, setCode] = useState<string | undefined>(undefined);
+  const [codeInput, setCodeInput] = useState("");
+  const [codeError, setCodeError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -25,15 +29,21 @@ export function SignerPage({ token }: { token: string }) {
   const [reason, setReason] = useState("");
   const [done, setDone] = useState<"signed" | "declined" | null>(null);
 
-  useEffect(() => {
-    esign.view(token).then(
+  function open(withCode?: string) {
+    esign.view(token, withCode).then(
       (v) => {
+        if (v.needs_code) return setLocked(v);
+        setLocked(null);
+        setCode(withCode);
         setView(v);
-        if (v.signer.status !== "waiting") esign.signerDocument(token, v.request.file_name).then(setFile, (e) => setError(e.message));
+        if (v.signer.status !== "waiting") esign.signerDocument(token, v.request.file_name, withCode).then(setFile, (e) => setError(e.message));
       },
-      (e) => setError(e.message),
+      (e) => (withCode ? setCodeError(e.message) : setError(e.message)),
     );
-  }, [token]);
+  }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => open(), [token]);
 
   const { view: pageView, count } = usePdfPage(file ?? undefined, page);
   const fields = useMemo(() => view?.fields.map((f, i) => ({ ...f, key: String(i) })) ?? [], [view]);
@@ -51,7 +61,7 @@ export function SignerPage({ token }: { token: string }) {
     setError(null);
     setBusy(true);
     try {
-      await esign.sign(token, { values, signature: signature || null, initials: initials || null, consent });
+      await esign.sign(token, { values, signature: signature || null, initials: initials || null, consent }, code);
       setDone("signed");
     } catch (e) {
       setError((e as Error).message);
@@ -63,7 +73,7 @@ export function SignerPage({ token }: { token: string }) {
   async function decline() {
     setBusy(true);
     try {
-      await esign.decline(token, reason);
+      await esign.decline(token, reason, code);
       setDone("declined");
     } catch (e) {
       setError((e as Error).message);
@@ -72,6 +82,25 @@ export function SignerPage({ token }: { token: string }) {
     }
   }
 
+  if (locked && !view)
+    return (
+      <Message icon={<KeyRound className="h-10 w-10 text-brand-600" />} title={locked.request.title} text={`${locked.request.sender} protected this request with an access code. They should have given it to you separately, for example by phone or text.`}>
+        <form
+          className="mt-5 flex w-full max-w-xs flex-col gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setCodeError(null);
+            open(codeInput.trim());
+          }}
+        >
+          <input className="input text-center tracking-widest" aria-label="Access code" autoComplete="one-time-code" autoFocus value={codeInput} onChange={(e) => setCodeInput(e.target.value)} placeholder="Access code" />
+          {codeError && <p className="text-sm text-rose-600">{codeError}</p>}
+          <button type="submit" className="btn-primary" disabled={codeInput.trim().length < 4}>
+            Open the document
+          </button>
+        </form>
+      </Message>
+    );
   if (error && !view) return <Message icon={<XCircle className="h-10 w-10 text-rose-500" />} title="This link can't be opened" text={error} />;
   if (!view) return <div className="container-page py-16 text-center text-slate-500">Loading…</div>;
   if (done === "signed")
@@ -89,7 +118,7 @@ export function SignerPage({ token }: { token: string }) {
     return (
       <Message icon={<CheckCircle2 className="h-10 w-10 text-emerald-600" />} title={view.request.title} text={text}>
         {view.final_available && (
-          <a href={esign.signerDocumentUrl(token)} className="btn-primary mt-4" target="_blank" rel="noreferrer">
+          <a href={esign.signerDocumentUrl(token, code)} className="btn-primary mt-4" target="_blank" rel="noreferrer">
             <Download className="h-4 w-4" /> Download signed copy
           </a>
         )}

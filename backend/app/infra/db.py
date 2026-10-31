@@ -236,6 +236,7 @@ class SignatureRequest(Base):
     expires_at: Mapped[datetime]
     completed_at: Mapped[datetime | None]
     files_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
+    stamp_id: Mapped[bool] = mapped_column(Boolean, default=True)  # print the request ID on every page
 
     signers: Mapped[list["Signer"]] = relationship(
         back_populates="request", cascade="all, delete-orphan", order_by="Signer.position"
@@ -261,6 +262,9 @@ class Signer(Base):
     values: Mapped[dict | None] = mapped_column(JSON)  # filled in when they sign
     signed_at: Mapped[datetime | None]
     decline_reason: Mapped[str | None] = mapped_column(Text)
+    # An optional code the sender shares with the signer another way (phone, chat), checked as well as the link.
+    access_code_hash: Mapped[str | None] = mapped_column(String(200))
+    code_failures: Mapped[int] = mapped_column(Integer, default=0)
 
     request: Mapped[SignatureRequest] = relationship(back_populates="signers")
 
@@ -280,6 +284,24 @@ class SignatureEvent(Base):
     detail: Mapped[str | None] = mapped_column(Text)
 
     request: Mapped[SignatureRequest] = relationship(back_populates="events")
+
+
+class SignatureTemplate(Base):
+    """A reusable request: a PDF with fields placed for named roles ("Tenant", "Landlord"). Its PDF lives under
+    esign-templates/{owner_id}/{id}.pdf in storage."""
+
+    __tablename__ = "signature_templates"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    owner_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(200))
+    file_name: Mapped[str] = mapped_column(String(255))
+    roles: Mapped[list] = mapped_column(JSON)  # ["Tenant", "Landlord"]
+    fields: Mapped[list] = mapped_column(JSON)  # same shape as the request's fields; "signer" indexes roles
+    message: Mapped[str | None] = mapped_column(Text)
+    sequential: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(default=utcnow)
 
 
 class Database:

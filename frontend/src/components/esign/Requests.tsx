@@ -1,12 +1,12 @@
 "use client";
 
-import { Bell, CheckCircle2, Clock, Download, FileSignature, Plus, ShieldCheck, Trash2, XCircle } from "lucide-react";
+import { Bell, CheckCircle2, Clock, Download, FileSignature, KeyRound, LayoutTemplate, Plus, ShieldCheck, Trash2, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { useSession } from "@/components/AppProviders";
-import { esign, type RequestDetail as Detail, type RequestStatus, type RequestSummary, type SignerStatus, signerColour } from "@/lib/esign";
+import { esign, type RequestDetail as Detail, type RequestStatus, type RequestSummary, type SignerStatus, signerColour, type TemplateSummary } from "@/lib/esign";
 
 const STATUS: Record<RequestStatus, { label: string; className: string }> = {
   sent: { label: "Waiting for signatures", className: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200" },
@@ -25,6 +25,7 @@ const EVENTS: Record<string, string> = {
   cancelled: "Cancelled",
   expired: "Expired",
   completed: "Completed and sealed",
+  code_failed: "Entered a wrong access code",
 };
 
 const date = (iso: string) => new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
@@ -106,7 +107,56 @@ export function RequestList() {
           </li>
         ))}
       </ul>
+      <Templates />
     </div>
+  );
+}
+
+function Templates() {
+  const [rows, setRows] = useState<TemplateSummary[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    esign.templates().then((r) => setRows(r.templates), (e) => setError(e.message));
+  }, []);
+
+  async function remove(t: TemplateSummary) {
+    if (!confirm(`Delete the template “${t.name}”? Requests already sent from it aren't affected.`)) return;
+    try {
+      await esign.removeTemplate(t.id);
+      setRows((r) => r?.filter((x) => x.id !== t.id) ?? null);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  return (
+    <section className="mt-10" aria-labelledby="templates-heading">
+      <h2 id="templates-heading" className="mb-1 flex items-center gap-2 text-lg font-semibold">
+        <LayoutTemplate className="h-5 w-5" /> Templates
+      </h2>
+      <p className="mb-3 text-sm text-slate-500">Documents you send often, with their fields already placed. Save one from the last step of a new request.</p>
+      {error && <p className="text-sm text-rose-600">{error}</p>}
+      {rows && !rows.length && <p className="card p-5 text-center text-sm text-slate-500">No templates yet.</p>}
+      <ul className="space-y-2">
+        {rows?.map((t) => (
+          <li key={t.id} className="card flex flex-wrap items-center gap-3 p-4">
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-medium">{t.name}</p>
+              <p className="truncate text-sm text-slate-500">
+                {t.roles.join(", ")} · {t.field_count} field{t.field_count === 1 ? "" : "s"}
+                {t.sequential ? " · in order" : ""}
+              </p>
+            </div>
+            <Link href={`/esign/new?template=${t.id}`} className="btn-secondary px-3 py-1.5 text-sm">
+              Use
+            </Link>
+            <button type="button" className="btn-ghost px-2 py-1.5" aria-label={`Delete template ${t.name}`} onClick={() => remove(t)}>
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -195,7 +245,14 @@ export function RequestView({ id }: { id: string }) {
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{s.name}</p>
-                  <p className="truncate text-sm text-slate-500">{s.email}</p>
+                  <p className="truncate text-sm text-slate-500">
+                    {s.email}
+                    {s.has_code && (
+                      <span className="ml-2 inline-flex items-center gap-1 text-xs" title="Needs an access code">
+                        <KeyRound className="h-3 w-3" /> code
+                      </span>
+                    )}
+                  </p>
                   {s.decline_reason && <p className="mt-1 text-sm text-rose-600">“{s.decline_reason}”</p>}
                 </div>
                 <span className="flex items-center gap-1 text-sm">

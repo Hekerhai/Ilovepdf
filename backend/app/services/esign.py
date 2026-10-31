@@ -17,6 +17,8 @@ from pathlib import Path
 from typing import Literal
 
 import pikepdf
+from argon2 import PasswordHasher
+from argon2.exceptions import VerificationError
 from PIL import Image
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 from reportlab.lib import colors
@@ -27,9 +29,18 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.domain.errors import Forbidden, NotFound, QuotaExceeded, ValidationFailed
+from app.domain.errors import Forbidden, NotFound, QuotaExceeded, Unauthorized, ValidationFailed
 from app.domain.ports import FileStorage, Mailer
-from app.infra.db import Database, SignatureEvent, SignatureRequest, Signer, User, as_utc, utcnow
+from app.infra.db import (
+    Database,
+    SignatureEvent,
+    SignatureRequest,
+    SignatureTemplate,
+    Signer,
+    User,
+    as_utc,
+    utcnow,
+)
 from app.services.actors import Actor
 from app.services.auth import normalize_email, sha256
 from app.tools.editor import EditObject, _draw_object
@@ -40,11 +51,17 @@ log = logging.getLogger(__name__)
 
 FieldKind = Literal["signature", "initials", "date", "name", "text", "checkbox"]
 DONE = ("completed", "declined", "cancelled", "expired")
+MAX_CODE_FAILURES = 10
+MAX_TEMPLATES = 100
+_hasher = PasswordHasher()
 
 
 class SignerIn(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     email: EmailStr
+    access_code: str | None = Field(
+        None, min_length=4, max_length=64, description="Optional code you give the signer another way (phone, chat)"
+    )
 
 
 class FieldIn(BaseModel):
@@ -68,18 +85,41 @@ class RequestIn(BaseModel):
     fields: list[FieldIn] = Field(..., min_length=1, max_length=500)
     sequential: bool = Field(False, description="Ask signers one after another, in order")
     expires_in_days: int = Field(14, ge=1, le=90)
+    stamp_id: bool = Field(True, description="Print the request ID in the margin of every page of the signed copy")
 
     @model_validator(mode="after")
     def _check(self):
         emails = [normalize_email(s.email) for s in self.signers]
         if len(set(emails)) != len(emails):
             raise ValueError("Each signer needs a different email address.")
-        for i, _ in enumerate(self.signers):
-            if not any(f.signer == i and f.type in ("signature", "initials") for f in self.fields):
-                raise ValueError(f"Add a signature field for {self.signers[i].name}.")
-        if any(f.signer >= len(self.signers) for f in self.fields):
-            raise ValueError("A field belongs to a signer that doesn't exist.")
+        _check_fields(self.fields, [s.name for s in self.signers])
         return self
+
+
+class TemplateIn(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    roles: list[str] = Field(..., min_length=1, max_length=20, description="Who signs, e.g. Tenant, Landlord")
+    fields: list[FieldIn] = Field(..., min_length=1, max_length=500, description="'signer' indexes roles")
+    message: str | None = Field(None, max_length=2000)
+    sequential: bool = False
+
+    @model_validator(mode="after")
+    def _check(self):
+        self.roles = [r.strip()[:100] for r in self.roles]
+        if not all(self.roles):
+            raise ValueError("Give every role a name.")
+        if len({r.lower() for r in self.roles}) != len(self.roles):
+            raise ValueError("Each role needs a different name.")
+        _check_fields(self.fields, self.roles)
+        return self
+
+
+def _check_fields(fields: list[FieldIn], names: list[str]) -> None:
+    if any(f.signer >= len(names) for f in fields):
+        raise ValueError("A field belongs to a signer that doesn't exist.")
+    for i, name in enumerate(names):
+        if not any(f.signer == i and f.type in ("signature", "initials") for f in fields):
+            raise ValueError(f"Add a signature field for {name}.")
 
 
 class SignIn(BaseModel):
@@ -148,6 +188,7 @@ class ESignService:
                 message=(body.message or "").strip() or None,
                 file_name=file_name,
                 sequential=body.sequential,
+                stamp_id=body.stamp_id,
                 original_sha256=_sha256_file(pdf),
                 expires_at=utcnow() + timedelta(days=body.expires_in_days),
             )
@@ -167,6 +208,7 @@ class ESignService:
                         token_hash=sha256(token),
                         status="pending" if first else "waiting",
                         fields=fields,
+                        access_code_hash=_hasher.hash(s.access_code.strip()) if s.access_code else None,
                     )
                 )
             session.flush()
@@ -242,7 +284,22 @@ class ESignService:
 
     # ---- signer -----------------------------------------------------------------------------------------------
 
-    def view(self, token: str, *, ip: str | None = None, user_agent: str | None = None) -> dict:
+    def view(
+        self, token: str, *, code: str | None = None, ip: str | None = None, user_agent: str | None = None
+    ) -> dict:
+        with self.db.session() as session:
+            signer = self._signer(session, token)
+            req = signer.request
+            needs_code = signer.access_code_hash is not None
+            if needs_code and not code:
+                # Say only enough for the signer to recognise the request; the rest waits for the code.
+                return {
+                    "needs_code": True,
+                    "request": {"title": req.title, "sender": self._owner_name(session, req)},
+                    "signer": {"name": signer.name},
+                }
+        if needs_code:
+            self._check_code(token, code, ip=ip, user_agent=user_agent)
         with self.db.session() as session:
             signer = self._signer(session, token)
             req = signer.request
@@ -260,21 +317,32 @@ class ESignService:
                     "expires_at": as_utc(req.expires_at).isoformat(),
                 },
                 "signer": {"name": signer.name, "email": signer.email, "status": signer.status},
+                "needs_code": False,
                 "fields": signer.fields,
                 "can_sign": req.status == "sent" and signer.status in ("pending", "viewed"),
                 "final_available": req.status == "completed" and not req.files_deleted,
             }
 
-    def signer_document(self, token: str) -> tuple[str, Iterator[bytes]]:
+    def signer_document(self, token: str, *, code: str | None = None) -> tuple[str, Iterator[bytes]]:
+        self._check_code(token, code)
         with self.db.session() as session:
             signer = self._signer(session, token)
             if signer.status == "waiting":
                 raise Forbidden("It isn't your turn to sign yet. You'll get an email when it is.")
             return self._document(signer.request)
 
-    def sign(self, token: str, body: SignIn, *, ip: str | None = None, user_agent: str | None = None) -> dict:
+    def sign(
+        self,
+        token: str,
+        body: SignIn,
+        *,
+        code: str | None = None,
+        ip: str | None = None,
+        user_agent: str | None = None,
+    ) -> dict:
         if not body.consent:
             raise ValidationFailed("Please agree to sign electronically.")
+        self._check_code(token, code, ip=ip, user_agent=user_agent)
         with self.db.session() as session:
             signer = self._signer(session, token)
             req = signer.request
@@ -317,7 +385,16 @@ class ESignService:
                 self._finalize(session, req)
             return {"status": signer.status, "request_status": req.status}
 
-    def decline(self, token: str, reason: str | None, *, ip: str | None = None, user_agent: str | None = None) -> dict:
+    def decline(
+        self,
+        token: str,
+        reason: str | None,
+        *,
+        code: str | None = None,
+        ip: str | None = None,
+        user_agent: str | None = None,
+    ) -> dict:
+        self._check_code(token, code, ip=ip, user_agent=user_agent)
         with self.db.session() as session:
             signer = self._signer(session, token)
             req = signer.request
@@ -337,6 +414,102 @@ class ESignService:
                     f"{self.public_url}/esign/{req.id}",
                 )
             return {"status": "declined"}
+
+    # ---- templates --------------------------------------------------------------------------------------------
+
+    def templates(self, user: User) -> list[dict]:
+        with self.db.session() as session:
+            rows = session.scalars(
+                select(SignatureTemplate)
+                .where(SignatureTemplate.owner_id == user.id)
+                .order_by(SignatureTemplate.updated_at.desc())
+            ).all()
+            return [self._template_out(t) for t in rows]
+
+    def save_template(self, actor: Actor, pdf: Path, file_name: str, body: TemplateIn) -> dict:
+        user = actor.user
+        if user is None:
+            raise Forbidden("Sign in to save templates.")
+        if actor.plan.esign_requests_per_month == 0:
+            raise QuotaExceeded("Your plan doesn't include signature requests.", code="esign_limit")
+        with open_pdf(pdf) as doc:
+            pages = len(doc.pages)
+        if any(f.page > pages for f in body.fields):
+            raise ValidationFailed(f"A field is on a page this PDF doesn't have; it has {pages}.")
+        with self.db.session() as session:
+            count = session.scalar(
+                select(func.count()).select_from(SignatureTemplate).where(SignatureTemplate.owner_id == user.id)
+            )
+            if count >= MAX_TEMPLATES:
+                raise ValidationFailed(f"You can keep up to {MAX_TEMPLATES} templates. Delete one first.")
+            tpl = SignatureTemplate(
+                owner_id=user.id,
+                name=body.name.strip(),
+                file_name=file_name,
+                roles=body.roles,
+                fields=[f.model_dump() for f in body.fields],
+                message=(body.message or "").strip() or None,
+                sequential=body.sequential,
+            )
+            session.add(tpl)
+            session.flush()
+            self.storage.put(self._template_key(tpl), pdf)
+            return self._template_out(tpl)
+
+    def template(self, user: User, template_id: str) -> dict:
+        with self.db.session() as session:
+            tpl = self._owned_template(session, user, template_id)
+            return {**self._template_out(tpl), "fields": tpl.fields, "message": tpl.message}
+
+    def template_document(self, user: User, template_id: str) -> tuple[str, Iterator[bytes]]:
+        with self.db.session() as session:
+            tpl = self._owned_template(session, user, template_id)
+            return tpl.file_name, self.storage.open_stream(self._template_key(tpl))
+
+    def rename_template(self, user: User, template_id: str, name: str) -> dict:
+        name = name.strip()[:200]
+        if not name:
+            raise ValidationFailed("Give the template a name.")
+        with self.db.session() as session:
+            tpl = self._owned_template(session, user, template_id)
+            tpl.name, tpl.updated_at = name, utcnow()
+            return self._template_out(tpl)
+
+    def delete_template(self, user: User, template_id: str) -> None:
+        with self.db.session() as session:
+            tpl = self._owned_template(session, user, template_id)
+            self.storage.delete_prefix(self._template_key(tpl))
+            session.delete(tpl)
+
+    def delete_templates_for(self, user_id: str) -> None:
+        self.storage.delete_prefix(f"esign-templates/{user_id}/")
+        with self.db.session() as session:
+            for tpl in session.scalars(select(SignatureTemplate).where(SignatureTemplate.owner_id == user_id)):
+                session.delete(tpl)
+
+    @staticmethod
+    def _owned_template(session: Session, user: User, template_id: str) -> SignatureTemplate:
+        tpl = session.get(SignatureTemplate, template_id)
+        if tpl is None or tpl.owner_id != user.id:
+            raise NotFound("Template not found.")
+        return tpl
+
+    @staticmethod
+    def _template_key(tpl: SignatureTemplate) -> str:
+        return f"esign-templates/{tpl.owner_id}/{tpl.id}.pdf"
+
+    @staticmethod
+    def _template_out(tpl: SignatureTemplate) -> dict:
+        return {
+            "id": tpl.id,
+            "name": tpl.name,
+            "file_name": tpl.file_name,
+            "roles": tpl.roles,
+            "sequential": tpl.sequential,
+            "field_count": len(tpl.fields),
+            "created_at": as_utc(tpl.created_at).isoformat(),
+            "updated_at": as_utc(tpl.updated_at).isoformat(),
+        }
 
     # ---- housekeeping -----------------------------------------------------------------------------------------
 
@@ -393,6 +566,27 @@ class ESignService:
             raise NotFound("This signing link isn't valid. Ask the sender for a new one.")
         return signer
 
+    def _check_code(self, token: str, code: str | None, *, ip=None, user_agent=None) -> None:
+        """Signers with an access code must give it on every call, not just the first.
+
+        Runs in its own session so a wrong guess is counted even though the request then fails.
+        """
+        wrong = False
+        with self.db.session() as session:
+            signer = self._signer(session, token)
+            if not signer.access_code_hash:
+                return
+            if signer.code_failures >= MAX_CODE_FAILURES:
+                raise Forbidden("Too many wrong codes. Ask the sender to send the request again.")
+            try:
+                _hasher.verify(signer.access_code_hash, (code or "").strip())
+            except VerificationError:
+                wrong = True
+                signer.code_failures += 1
+                self._event(signer.request, signer, "code_failed", ip=ip, user_agent=user_agent)
+        if wrong:
+            raise Unauthorized("That access code isn't right.", code="bad_code")
+
     def _owner_name(self, session: Session, req: SignatureRequest) -> str:
         owner = session.get(User, req.owner_id)
         return (owner.name or owner.email) if owner else self.brand
@@ -424,6 +618,8 @@ class ESignService:
     def _invite(self, req, signer, token: str, *, sender: User | None, reminder: bool = False) -> None:
         who = (sender.name or sender.email) if sender else self.brand
         note = f"\n\nMessage from {who}:\n{req.message}" if req.message else ""
+        if signer.access_code_hash:
+            note += f"\n\nYou'll need the access code {who} gave you. It isn't in this email."
         self.mailer.send(
             to=signer.email,
             subject=f"{'Reminder: ' if reminder else ''}{who} asked you to sign “{req.title}”",
@@ -452,6 +648,7 @@ class ESignService:
             **self._summary(req),
             "message": req.message,
             "sequential": req.sequential,
+            "stamp_id": req.stamp_id,
             "original_sha256": req.original_sha256,
             "final_sha256": req.final_sha256,
             "files_deleted": req.files_deleted,
@@ -463,6 +660,7 @@ class ESignService:
                     "signed_at": as_utc(s.signed_at).isoformat() if s.signed_at else None,
                     "decline_reason": s.decline_reason,
                     "fields": len(s.fields),
+                    "has_code": s.access_code_hash is not None,
                 }
                 for s in req.signers
             ],
@@ -528,11 +726,20 @@ class ESignService:
                 if obj is not None:
                     by_page.setdefault(f["page"] - 1, []).append(obj)
 
-        def draw(c, index: int, w: float, h: float) -> None:
-            for obj in by_page[index]:
-                _draw_object(c, self._fit(obj, w, h), w, h)
+        stamp = f"{self.brand} eSign · ID {req.id}" if req.stamp_id else None
 
-        stamp_pages(pdf, draw, set(by_page))
+        def draw(c, index: int, w: float, h: float) -> None:
+            for obj in by_page.get(index, []):
+                _draw_object(c, self._fit(obj, w, h), w, h)
+            if stamp:
+                # Small and grey in the bottom margin, so every page can be matched to its audit trail.
+                c.saveState()
+                c.setFont("Helvetica", 6.5)
+                c.setFillGray(0.45)
+                c.drawString(14, 8, stamp)
+                c.restoreState()
+
+        stamp_pages(pdf, draw, None if stamp else set(by_page))
 
     @staticmethod
     def _fit(obj: EditObject, w: float, h: float) -> EditObject:

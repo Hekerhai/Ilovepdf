@@ -3,7 +3,7 @@
 import json
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Header, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, ValidationError
 
@@ -11,7 +11,7 @@ from app.api.deps import SpooledUploads, client_ip, client_ip_hash, container, s
 from app.container import Container
 from app.domain.errors import ValidationFailed
 from app.services.actors import Actor
-from app.services.esign import RequestIn, SignIn
+from app.services.esign import RequestIn, SignIn, TemplateIn
 
 router = APIRouter(tags=["esign"])
 
@@ -37,15 +37,24 @@ async def create_request(
     c: Container = Depends(container),
 ) -> dict:
     c.limiter.hit(f"esign:create:{a.user.id}", limit=30, window_seconds=3600)
+    body = _parse(RequestIn, details)
+    upload = await _pdf_upload(file, spool)
+    return c.esign.create(a, upload.path, upload.name, body, ip=client_ip(request))
+
+
+def _parse(model, details: str):
     try:
-        body = RequestIn.model_validate(json.loads(details))
+        return model.model_validate(json.loads(details))
     except (ValueError, ValidationError) as exc:
         message = exc.errors()[0]["msg"] if isinstance(exc, ValidationError) else "'details' must be valid JSON."
         raise ValidationFailed(message.removeprefix("Value error, ")) from None
+
+
+async def _pdf_upload(file: UploadFile, spool: SpooledUploads):
     if not (file.filename or "").lower().endswith(".pdf"):
         raise ValidationFailed("Upload a PDF to send for signature.")
     [upload] = await spool.add([file])
-    return c.esign.create(a, upload.path, upload.name, body, ip=client_ip(request))
+    return upload
 
 
 @router.get("/esign/requests", summary="Your signature requests")
@@ -79,29 +88,93 @@ def delete(request_id: str, a: Actor = Depends(user), c: Container = Depends(con
     c.esign.delete(a.user, request_id)
 
 
-# ---- signer side: the link in the email is the only credential --------------------------------------------------
+# ---- templates -------------------------------------------------------------------------------------------------
+
+
+@router.get("/esign/templates", summary="Your saved templates")
+def list_templates(a: Actor = Depends(user), c: Container = Depends(container)) -> dict:
+    return {"templates": c.esign.templates(a.user)}
+
+
+@router.post("/esign/templates", status_code=201, summary="Save a PDF with its fields as a reusable template")
+async def save_template(
+    file: UploadFile = File(...),
+    details: str = Form(..., description="JSON: name, roles, fields, message, sequential"),
+    a: Actor = Depends(user),
+    spool: SpooledUploads = Depends(spooler),
+    c: Container = Depends(container),
+) -> dict:
+    body = _parse(TemplateIn, details)
+    upload = await _pdf_upload(file, spool)
+    return c.esign.save_template(a, upload.path, upload.name, body)
+
+
+@router.get("/esign/templates/{template_id}", summary="A template with its fields")
+def get_template(template_id: str, a: Actor = Depends(user), c: Container = Depends(container)) -> dict:
+    return c.esign.template(a.user, template_id)
+
+
+@router.get("/esign/templates/{template_id}/document", summary="The template's PDF")
+def template_document(template_id: str, a: Actor = Depends(user), c: Container = Depends(container)):
+    return _pdf_response(*c.esign.template_document(a.user, template_id))
+
+
+class RenameIn(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+
+
+@router.patch("/esign/templates/{template_id}", summary="Rename a template")
+def rename_template(
+    template_id: str, body: RenameIn, a: Actor = Depends(user), c: Container = Depends(container)
+) -> dict:
+    return c.esign.rename_template(a.user, template_id, body.name)
+
+
+@router.delete("/esign/templates/{template_id}", status_code=204, summary="Delete a template")
+def delete_template(template_id: str, a: Actor = Depends(user), c: Container = Depends(container)) -> None:
+    c.esign.delete_template(a.user, template_id)
+
+
+# ---- signer side: the link in the email is the credential, plus an access code when the sender set one ----------
 
 
 def _limit(request: Request, c: Container) -> None:
     c.limiter.hit(f"esign:sign:{client_ip_hash(request, c)}", limit=120, window_seconds=600)
 
 
+def access_code(
+    x_access_code: str | None = Header(None, description="The signer's access code, if the sender set one"),
+    code: str | None = Query(None, description="Same as X-Access-Code, for plain download links"),
+) -> str | None:
+    return x_access_code or code
+
+
 @router.get("/esign/sign/{token}", summary="What a signer sees")
-def signer_view(token: str, request: Request, c: Container = Depends(container)) -> dict:
+def signer_view(
+    token: str, request: Request, code: str | None = Depends(access_code), c: Container = Depends(container)
+) -> dict:
     _limit(request, c)
-    return c.esign.view(token, ip=client_ip(request), user_agent=request.headers.get("user-agent"))
+    return c.esign.view(token, code=code, ip=client_ip(request), user_agent=request.headers.get("user-agent"))
 
 
 @router.get("/esign/sign/{token}/document", summary="The document to sign")
-def signer_document(token: str, request: Request, c: Container = Depends(container)):
+def signer_document(
+    token: str, request: Request, code: str | None = Depends(access_code), c: Container = Depends(container)
+):
     _limit(request, c)
-    return _pdf_response(*c.esign.signer_document(token))
+    return _pdf_response(*c.esign.signer_document(token, code=code))
 
 
 @router.post("/esign/sign/{token}", summary="Sign")
-def sign(token: str, body: SignIn, request: Request, c: Container = Depends(container)) -> dict:
+def sign(
+    token: str,
+    body: SignIn,
+    request: Request,
+    code: str | None = Depends(access_code),
+    c: Container = Depends(container),
+) -> dict:
     _limit(request, c)
-    return c.esign.sign(token, body, ip=client_ip(request), user_agent=request.headers.get("user-agent"))
+    return c.esign.sign(token, body, code=code, ip=client_ip(request), user_agent=request.headers.get("user-agent"))
 
 
 class DeclineIn(BaseModel):
@@ -109,6 +182,13 @@ class DeclineIn(BaseModel):
 
 
 @router.post("/esign/sign/{token}/decline", summary="Decline to sign")
-def decline(token: str, body: DeclineIn, request: Request, c: Container = Depends(container)) -> dict:
+def decline(
+    token: str,
+    body: DeclineIn,
+    request: Request,
+    code: str | None = Depends(access_code),
+    c: Container = Depends(container),
+) -> dict:
     _limit(request, c)
-    return c.esign.decline(token, body.reason, ip=client_ip(request), user_agent=request.headers.get("user-agent"))
+    ua = request.headers.get("user-agent")
+    return c.esign.decline(token, body.reason, code=code, ip=client_ip(request), user_agent=ua)

@@ -200,3 +200,99 @@ def test_purge_and_account_export(app_env, tmp_path):
     assert detail["status"] == "expired" and detail["files_deleted"]
     assert client.get(f"/api/esign/requests/{req['id']}/document").status_code == 404
     assert c.privacy.export(user["id"])["signature_requests"][0]["title"] == "Services agreement"
+
+
+def test_access_code_and_id_stamp(app_env, tmp_path):
+    c, client = app_env
+    signup(client)
+    signers = [
+        {"name": "Grace Hopper", "email": "grace@example.com", "access_code": "4821"},
+        {"name": "Alan Turing", "email": "alan@example.com"},
+    ]
+    req = send(client, tmp_path, signers=signers).json()
+    assert [s["has_code"] for s in req["signers"]] == [True, False]
+    invite = next(m for m in c.mailer.outbox if m["to"] == "grace@example.com")
+    assert "access code" in invite["text"] and "4821" not in invite["text"]
+
+    grace, alan = link_for(c, "grace@example.com"), link_for(c, "alan@example.com")
+    anon = client.__class__(client.app)
+    locked = anon.get(f"/api/esign/sign/{grace}").json()
+    assert locked["needs_code"] and "fields" not in locked and locked["request"]["title"] == "Services agreement"
+    assert anon.get(f"/api/esign/sign/{grace}/document").status_code == 401
+    wrong = anon.get(f"/api/esign/sign/{grace}", headers={"X-Access-Code": "0000"})
+    assert wrong.status_code == 401 and wrong.json()["error"]["code"] == "bad_code"
+    view = anon.get(f"/api/esign/sign/{grace}", headers={"X-Access-Code": "4821"}).json()
+    assert not view["needs_code"] and len(view["fields"]) == 3
+    assert anon.get(f"/api/esign/sign/{grace}/document?code=4821").content.startswith(b"%PDF")
+    body = {"signature": signature_png(), "values": {"2": "CTO"}, "consent": True}
+    assert anon.post(f"/api/esign/sign/{grace}", json=body).status_code == 401  # needed on every call
+    assert anon.post(f"/api/esign/sign/{grace}", json=body, headers={"X-Access-Code": "4821"}).status_code == 200
+    anon.post(f"/api/esign/sign/{alan}", json={"signature": signature_png(), "values": {"1": True}, "consent": True})
+
+    detail = client.get(f"/api/esign/requests/{req['id']}").json()
+    assert detail["status"] == "completed" and "code_failed" in [e["kind"] for e in detail["events"]]
+    out = tmp_path / "signed.pdf"
+    out.write_bytes(client.get(f"/api/esign/requests/{req['id']}/document").content)
+    with pdfplumber.open(out) as pdf:
+        for page in pdf.pages[:2]:
+            assert f"ID {req['id']}" in page.extract_text()
+
+
+def test_access_code_locks_after_repeated_guesses(app_env, tmp_path):
+    c, client = app_env
+    signup(client)
+    signers = [{"name": "Grace Hopper", "email": "grace@example.com", "access_code": "secret-code"}]
+    fields = [{"signer": 0, "type": "signature", "page": 1, "x": 0.1, "y": 0.7, "width": 0.3, "height": 0.08}]
+    send(client, tmp_path, signers=signers, fields=fields, stamp_id=False)
+    grace = link_for(c, "grace@example.com")
+    for _ in range(10):
+        assert client.get(f"/api/esign/sign/{grace}", headers={"X-Access-Code": "guess"}).status_code == 401
+    locked = client.get(f"/api/esign/sign/{grace}", headers={"X-Access-Code": "secret-code"})
+    assert locked.status_code == 403 and "Too many" in locked.json()["error"]["message"]
+
+
+def test_templates(app_env, tmp_path):
+    c, client = app_env
+    assert client.get("/api/esign/templates").status_code == 401
+    signup(client)
+    pdf = make_pdf(tmp_path / "lease.pdf", 2)
+    tpl_body = {
+        "name": "Lease",
+        "roles": ["Tenant", "Landlord"],
+        "fields": [
+            {"signer": 0, "type": "signature", "page": 1, "x": 0.1, "y": 0.7, "width": 0.3, "height": 0.08},
+            {"signer": 1, "type": "signature", "page": 2, "x": 0.5, "y": 0.7, "width": 0.3, "height": 0.08},
+        ],
+        "sequential": True,
+    }
+
+    def save(body):
+        with pdf.open("rb") as f:
+            return client.post(
+                "/api/esign/templates",
+                data={"details": json.dumps(body)},
+                files={"file": ("lease.pdf", f, "application/pdf")},
+            )
+
+    bad = save({**tpl_body, "roles": ["Tenant", "tenant"]})
+    assert bad.status_code == 422 and "different name" in bad.json()["error"]["message"]
+    missing = save({**tpl_body, "fields": tpl_body["fields"][:1]})
+    assert missing.status_code == 422 and "Landlord" in missing.json()["error"]["message"]
+    r = save(tpl_body)
+    assert r.status_code == 201, r.text
+    tpl = r.json()
+    assert tpl["roles"] == ["Tenant", "Landlord"] and tpl["field_count"] == 2
+
+    listed = client.get("/api/esign/templates").json()["templates"]
+    assert [t["name"] for t in listed] == ["Lease"]
+    full = client.get(f"/api/esign/templates/{tpl['id']}").json()
+    assert full["fields"][1]["signer"] == 1 and full["sequential"]
+    assert client.get(f"/api/esign/templates/{tpl['id']}/document").content == pdf.read_bytes()
+    assert client.patch(f"/api/esign/templates/{tpl['id']}", json={"name": "Flat lease"}).json()["name"] == "Flat lease"
+
+    export = client.get("/api/me/export").json()
+    assert export["signature_templates"][0]["roles"] == ["Tenant", "Landlord"]
+
+    assert client.delete(f"/api/esign/templates/{tpl['id']}").status_code == 204
+    assert client.get(f"/api/esign/templates/{tpl['id']}").status_code == 404
+    assert not list(c.settings.storage_dir.glob("esign-templates/*/*"))

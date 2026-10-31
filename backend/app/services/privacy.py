@@ -15,6 +15,7 @@ from app.infra.db import (
     LoginToken,
     Membership,
     SignatureRequest,
+    SignatureTemplate,
     Subscription,
     Team,
     User,
@@ -84,6 +85,10 @@ class PrivacyService:
                     }
                     for r in session.scalars(select(SignatureRequest).where(SignatureRequest.owner_id == user_id))
                 ],
+                "signature_templates": [
+                    {"name": t.name, "roles": t.roles, "created_at": t.created_at.isoformat()}
+                    for t in session.scalars(select(SignatureTemplate).where(SignatureTemplate.owner_id == user_id))
+                ],
                 "workflows": [
                     {"name": w.name, "steps": w.steps}
                     for w in session.scalars(select(Workflow).where(Workflow.user_id == user_id))
@@ -119,6 +124,8 @@ class PrivacyService:
             for request in session.scalars(select(SignatureRequest).where(SignatureRequest.owner_id == user_id)):
                 self.storage.delete_prefix(f"esign/{request.id}/")
                 session.delete(request)
+            self.storage.delete_prefix(f"esign-templates/{user_id}/")
+            session.execute(delete(SignatureTemplate).where(SignatureTemplate.owner_id == user_id))
             session.execute(delete(Workflow).where(Workflow.user_id == user_id))
             session.execute(delete(ApiKey).where(ApiKey.user_id == user_id))
             session.execute(delete(LoginToken).where(LoginToken.email == user.email))
