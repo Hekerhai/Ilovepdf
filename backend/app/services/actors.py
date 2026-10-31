@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.infra.db import ApiKey, Membership, Team, User
+from app.infra.db import ApiKey, Membership, Subscription, Team, User, utcnow
 from app.plans import PLANS, Plan, PlanId, get_plan
 
 _RANK = {plan_id: rank for rank, plan_id in enumerate(PLANS)}
@@ -35,6 +35,15 @@ def effective_plan(session: Session, user: User) -> Plan:
         select(Team.plan_id).join(Membership, Membership.team_id == Team.id).where(Membership.user_id == user.id)
     ).all()
     candidates.extend(PlanId(p) for p in team_plans)
+    passes = session.scalars(
+        select(Subscription.plan_id).where(
+            Subscription.owner_type == "user",
+            Subscription.owner_id == user.id,
+            Subscription.status == "pass",
+            Subscription.current_period_end > utcnow(),
+        )
+    ).all()
+    candidates.extend(PlanId(p) for p in passes)
     return get_plan(max(candidates, key=lambda p: _RANK[p]))
 
 

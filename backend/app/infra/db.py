@@ -47,6 +47,8 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
     # Bumped on logout-everywhere / password change, invalidating outstanding session tokens.
     token_version: Mapped[int] = mapped_column(Integer, default=0)
+    # Signs outgoing API webhooks; created the first time the user asks for it.
+    webhook_secret: Mapped[str | None] = mapped_column(String(64))
 
     memberships: Mapped[list["Membership"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
@@ -163,6 +165,8 @@ class Job(Base):
     finished_at: Mapped[datetime | None]
     expires_at: Mapped[datetime] = mapped_column(index=True)
     files_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
+    webhook_url: Mapped[str | None] = mapped_column(String(2000))
+    webhook_status: Mapped[str | None] = mapped_column(String(16))  # pending | delivered | failed
 
 
 MIGRATION_LOCK = 0x466F6C696F  # "Folio"

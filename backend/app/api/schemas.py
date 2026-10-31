@@ -21,6 +21,7 @@ def job_out(job: Job, prefix: str = "/api") -> dict:
         "finished_at": as_utc(job.finished_at).isoformat() if job.finished_at else None,
         "expires_at": expires.isoformat(),
         "files_deleted": job.files_deleted,
+        "webhook_status": job.webhook_status,
         "download_url": f"{prefix}/jobs/{job.id}/download"
         if job.status == "succeeded" and not job.files_deleted
         else None,

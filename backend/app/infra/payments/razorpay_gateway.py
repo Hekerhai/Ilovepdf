@@ -70,6 +70,19 @@ class RazorpayGateway:
             client_payload={"key": self._key_id, "subscription_id": subscription["id"]},
         )
 
+    def create_payment(self, *, owner_id, email, plan_id, amount, description, success_url, cancel_url):
+        link = self._client().payment_link.create({
+            "amount": amount,
+            "currency": self.currency,
+            "description": description,
+            "customer": {"email": email},
+            "notify": {"email": True},
+            "callback_url": success_url,
+            "callback_method": "get",
+            "notes": {"kind": "pass", "owner_type": "user", "owner_id": owner_id, "plan_id": plan_id},
+        })  # fmt: skip
+        return CheckoutSession(provider=self.name, url=link.get("short_url"))
+
     def parse_webhook(self, payload: bytes, headers: dict[str, str]) -> SubscriptionEvent:
         if not self._webhook_secret:
             raise ServiceUnavailable("Razorpay webhook secret is not configured.")
@@ -77,6 +90,19 @@ class RazorpayGateway:
         if not hmac.compare_digest(expected, headers.get("x-razorpay-signature", "")):
             raise ValidationFailed("Invalid Razorpay signature.")
         event = json.loads(payload)
+        if event.get("event") == "payment_link.paid":
+            link = event["payload"]["payment_link"]["entity"]
+            notes = link.get("notes") or {}
+            if notes.get("kind") != "pass":
+                return SubscriptionEvent(provider=self.name, kind="ignored")
+            return SubscriptionEvent(
+                provider=self.name,
+                kind="paid",
+                owner_type="user",
+                owner_id=notes.get("owner_id"),
+                plan_id=notes.get("plan_id"),
+                external_subscription_id=link.get("id"),
+            )
         kind = {
             "subscription.activated": "activated",
             "subscription.charged": "renewed",

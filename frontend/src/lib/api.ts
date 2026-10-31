@@ -98,6 +98,13 @@ export const api = {
       "/api/billing/checkout",
       { method: "POST", body: json(body) },
     ),
+  buyPass: (provider: string) =>
+    request<{ provider: string; url: string | null; client_payload: Record<string, string> | null }>("/api/billing/pass", {
+      method: "POST",
+      body: json({ provider }),
+    }),
+  webhookSecret: (rotate = false) =>
+    request<{ secret: string }>(rotate ? "/api/me/webhook-secret/rotate" : "/api/me/webhook-secret", { method: rotate ? "POST" : "GET" }),
   subscriptions: () =>
     request<{
       subscriptions: {
@@ -129,6 +136,7 @@ export type BillingCatalog = {
     highlights: string[];
     prices: Record<string, { usd: number; inr: number }>;
   }[];
+  pass: { plan: string; days: number; usd: number; inr: number };
 };
 
 /** Poll a server job until it finishes. */

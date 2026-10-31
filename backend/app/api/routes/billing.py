@@ -33,6 +33,16 @@ def checkout(body: CheckoutIn, a: Actor = Depends(user), c: Container = Depends(
     return {"provider": session.provider, "url": session.url, "client_payload": session.client_payload}
 
 
+class PassIn(BaseModel):
+    provider: Literal["stripe", "razorpay"] = "stripe"
+
+
+@router.post("/pass", summary="Buy a 7-day pass: one payment, no renewal")
+def buy_pass(body: PassIn, a: Actor = Depends(user), c: Container = Depends(container)) -> dict:
+    session = c.billing.buy_pass(a.user, provider=body.provider)
+    return {"provider": session.provider, "url": session.url, "client_payload": session.client_payload}
+
+
 @router.get("/subscriptions")
 def subscriptions(a: Actor = Depends(user), c: Container = Depends(container)) -> dict:
     return {

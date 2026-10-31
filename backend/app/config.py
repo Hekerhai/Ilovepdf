@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     # Privacy
     file_ttl_hours: float = 2.0
     esign_retention_days: int = 30  # signed copies are kept this long after completion, then deleted
+    webhook_allow_private: bool = False  # let API webhooks reach private/loopback addresses (development only)
     janitor_interval_seconds: int = 300
 
     # Engines

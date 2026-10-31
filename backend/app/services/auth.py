@@ -229,6 +229,15 @@ class AuthService:
 
     # ---- API keys ---------------------------------------------------------------------------
 
+    def webhook_secret(self, user_id: str, *, rotate: bool = False) -> str:
+        from app.infra.webhooks import new_webhook_secret
+
+        with self.db.session() as session:
+            user = session.get(User, user_id)
+            if rotate or not user.webhook_secret:
+                user.webhook_secret = new_webhook_secret()
+            return user.webhook_secret
+
     def create_api_key(self, user_id: str, name: str) -> tuple[ApiKey, str]:
         raw = API_KEY_PREFIX + secrets.token_urlsafe(32)
         with self.db.session() as session:

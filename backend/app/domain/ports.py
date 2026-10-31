@@ -59,7 +59,7 @@ class SubscriptionEvent:
     """A provider-neutral billing event produced by verifying a webhook."""
 
     provider: str
-    kind: str  # "activated" | "renewed" | "cancelled" | "ignored"
+    kind: str  # "activated" | "renewed" | "cancelled" | "paid" (one-time pass) | "ignored"
     owner_type: str | None = None  # "user" | "team"
     owner_id: str | None = None
     plan_id: str | None = None
@@ -86,6 +86,18 @@ class PaymentGateway(Protocol):
         interval: str,
         seats: int,
         amount: int,
+        success_url: str,
+        cancel_url: str,
+    ) -> CheckoutSession: ...
+
+    def create_payment(
+        self,
+        *,
+        owner_id: str,
+        email: str,
+        plan_id: str,
+        amount: int,
+        description: str,
         success_url: str,
         cancel_url: str,
     ) -> CheckoutSession: ...

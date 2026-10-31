@@ -126,5 +126,11 @@ PLANS: dict[PlanId, Plan] = {
 }
 
 
+# A one-time payment that gives Pro for a week, for people who need it once. Never renews.
+PASS_PLAN = PlanId.PRO
+PASS_DAYS = 7
+PASS_PRICE = Price(usd=300, inr=19900)
+
+
 def get_plan(plan_id: str | PlanId) -> Plan:
     return PLANS[PlanId(plan_id)]

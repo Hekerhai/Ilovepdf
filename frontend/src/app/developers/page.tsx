@@ -35,6 +35,25 @@ if job["status"] == "succeeded":
 else:
     print(job["error"])`;
 
+const HOOK = `# Skip polling: pass webhook_url and we POST when the task finishes
+curl -X POST ${SITE_URL}/v1/jobs -H "Authorization: Bearer fk_live_..." \\
+  -F tool=ocr -F files=@scan.pdf -F webhook_url=https://example.com/folio-hook
+
+# Your endpoint receives:
+# Folio-Signature: t=1767225600,v1=5f2c...
+# {"type": "job.succeeded", "created": 1767225600,
+#  "job": {"id": "...", "status": "succeeded", "download_url": "${SITE_URL}/v1/jobs/.../download", ...}}`;
+
+const VERIFY = `import hashlib, hmac, time
+
+def verify(raw_body: bytes, header: str, secret: str, tolerance=300) -> bool:
+    parts = dict(p.split("=", 1) for p in header.split(","))
+    if abs(time.time() - int(parts["t"])) > tolerance:
+        return False  # replayed or stale
+    signed = parts["t"].encode() + b"." + raw_body
+    expected = hmac.new(secret.encode(), signed, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, parts["v1"])`;
+
 export default function DevelopersPage() {
   return (
     <div className="container-page py-12">
@@ -71,6 +90,21 @@ export default function DevelopersPage() {
           </div>
         ))}
       </div>
+      <h2 id="webhooks" className="mt-12 scroll-mt-20 text-2xl font-bold">Webhooks</h2>
+      <p className="mt-2 max-w-3xl text-slate-600 dark:text-slate-400">
+        Add <code>webhook_url</code> (https) to any task. When it succeeds or fails we send a signed POST, retrying on network errors and 5xx
+        responses. Get your signing secret from <code>GET /v1/webhooks/secret</code> or your account&apos;s API page, and check the{" "}
+        <code>Folio-Signature</code> header before trusting the call.
+      </p>
+      <div className="mt-4 grid gap-6 lg:grid-cols-2">
+        <pre className="overflow-x-auto rounded-2xl bg-slate-900 p-5 text-xs text-slate-100">{HOOK}</pre>
+        <pre className="overflow-x-auto rounded-2xl bg-slate-900 p-5 text-xs text-slate-100">{VERIFY}</pre>
+      </div>
+      <h2 className="mt-12 text-2xl font-bold">Form fields</h2>
+      <p className="mt-2 max-w-3xl text-slate-600 dark:text-slate-400">
+        <code>POST /v1/forms/fields</code> with a PDF <code>file</code> returns its fillable fields (name, type and choices) without using a
+        credit. Pass the names to the <code>fill_forms</code> tool as <code>{"{\"fields\": {\"name\": \"value\"}}"}</code>.
+      </p>
       <h2 className="mt-12 text-2xl font-bold">Tools</h2>
       <div className="card mt-4 overflow-x-auto">
         <table className="w-full text-left text-sm">

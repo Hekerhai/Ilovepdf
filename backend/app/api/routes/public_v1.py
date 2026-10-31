@@ -7,6 +7,7 @@ from app.api.routes import jobs as web
 from app.api.routes.tools import list_tools
 from app.api.schemas import job_out
 from app.container import Container
+from app.infra.webhooks import SIGNATURE_HEADER
 from app.services.actors import Actor
 
 router = APIRouter(tags=["developer API v1"])
@@ -23,13 +24,14 @@ async def create_job(
     tool: str | None = Form(None),
     options: str | None = Form(None),
     steps: str | None = Form(None),
+    webhook_url: str | None = Form(None, description="Called with a signed POST when the task finishes"),
     a: Actor = Depends(api_user),
     spool: SpooledUploads = Depends(spooler),
     c: Container = Depends(container),
 ) -> dict:
     raw_steps = web.parse_steps_form(tool, options, steps)
     uploads = await spool.add(files)
-    return job_out(c.jobs.create(a, raw_steps, uploads), prefix="/v1")
+    return job_out(c.jobs.create(a, raw_steps, uploads, webhook_url=webhook_url), prefix="/v1")
 
 
 @router.get("/jobs/{job_id}", summary="Task status")
@@ -51,3 +53,20 @@ def delete(job_id: str, a: Actor = Depends(api_user), c: Container = Depends(con
 def usage(a: Actor = Depends(api_user), c: Container = Depends(container)) -> dict:
     with c.db.session() as session:
         return c.quota.api_usage(session, a)
+
+
+@router.post("/forms/fields", summary="List a PDF form's fields (free, no credit)")
+async def form_fields(
+    file: UploadFile = File(...),
+    a: Actor = Depends(api_user),
+    spool: SpooledUploads = Depends(spooler),
+    c: Container = Depends(container),
+) -> dict:
+    c.limiter.hit(f"v1:fields:{a.user.id}", limit=120, window_seconds=60)
+    [upload] = await spool.add([file])
+    return {"fields": c.jobs.describe_form(upload)}
+
+
+@router.get("/webhooks/secret", summary="The secret that signs your webhooks")
+def webhook_secret(a: Actor = Depends(api_user), c: Container = Depends(container)) -> dict:
+    return {"secret": c.auth.webhook_secret(a.user.id), "header": SIGNATURE_HEADER}

@@ -54,6 +54,30 @@ class StripeGateway:
         )
         return CheckoutSession(provider=self.name, url=session.url)
 
+    def create_payment(self, *, owner_id, email, plan_id, amount, description, success_url, cancel_url):
+        stripe = self._stripe()
+        metadata = {"kind": "pass", "owner_type": "user", "owner_id": owner_id, "plan_id": plan_id}
+        session = stripe.checkout.Session.create(
+            mode="payment",
+            customer_email=email,
+            client_reference_id=f"user:{owner_id}",
+            line_items=[
+                {
+                    "quantity": 1,
+                    "price_data": {
+                        "currency": self.currency,
+                        "unit_amount": amount,
+                        "product_data": {"name": description},
+                    },
+                }
+            ],
+            metadata=metadata,
+            payment_intent_data={"metadata": metadata},
+            success_url=success_url,
+            cancel_url=cancel_url,
+        )
+        return CheckoutSession(provider=self.name, url=session.url)
+
     def parse_webhook(self, payload: bytes, headers: dict[str, str]) -> SubscriptionEvent:
         stripe = self._stripe()
         if not self._webhook_secret:
@@ -63,6 +87,19 @@ class StripeGateway:
         except (ValueError, stripe.SignatureVerificationError):
             raise ValidationFailed("Invalid Stripe signature.") from None
         obj = event["data"]["object"]
+        if event["type"] == "checkout.session.completed" and obj.get("mode") == "payment":
+            meta = obj.get("metadata") or {}
+            if meta.get("kind") != "pass" or obj.get("payment_status") != "paid":
+                return SubscriptionEvent(provider=self.name, kind="ignored")
+            return SubscriptionEvent(
+                provider=self.name,
+                kind="paid",
+                owner_type="user",
+                owner_id=meta.get("owner_id"),
+                plan_id=meta.get("plan_id"),
+                external_customer_id=obj.get("customer"),
+                external_subscription_id=obj.get("payment_intent") or obj.get("id"),
+            )
         kind = {
             "customer.subscription.created": "activated",
             "customer.subscription.updated": "renewed",

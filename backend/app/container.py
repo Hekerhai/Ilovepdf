@@ -15,6 +15,7 @@ from app.infra.payments.stripe_gateway import StripeGateway
 from app.infra.queue import InlineJobQueue, RQJobQueue
 from app.infra.ratelimit import MemoryRateLimiter, RedisRateLimiter
 from app.infra.storage import LocalStorage, S3Storage
+from app.infra.webhooks import WebhookSender
 from app.services.auth import AuthService
 from app.services.billing import BillingService
 from app.services.esign import ESignService
@@ -99,6 +100,8 @@ def build_container(settings: Settings | None = None) -> Container:
         ghostscript=Ghostscript(s.ghostscript_bin, s.tool_timeout_seconds),
         ocr_languages=s.ocr_languages,
         tool_timeout=s.tool_timeout_seconds,
+        webhooks=WebhookSender(allow_private=s.webhook_allow_private),
+        public_url=s.public_url,
     )
     if isinstance(queue, InlineJobQueue):
         queue.runner = jobs.run

@@ -1,13 +1,14 @@
 """Billing: start checkouts and apply provider webhooks to plans. Providers are pluggable PaymentGateways."""
 
 import logging
+from datetime import timedelta
 
 from sqlalchemy import select
 
 from app.domain.errors import Forbidden, NotFound, ServiceUnavailable, ValidationFailed
 from app.domain.ports import CheckoutSession, PaymentGateway, SubscriptionEvent
-from app.infra.db import Database, Membership, Subscription, Team, User
-from app.plans import PLANS, BillingInterval, PlanId, get_plan
+from app.infra.db import Database, Membership, Subscription, Team, User, as_utc, utcnow
+from app.plans import PASS_DAYS, PASS_PLAN, PASS_PRICE, PLANS, BillingInterval, PlanId, get_plan
 
 log = logging.getLogger(__name__)
 
@@ -44,7 +45,53 @@ class BillingService:
                 for plan in PLANS.values()
                 if plan.id != PlanId.GUEST
             ],
+            "pass": {"plan": PASS_PLAN.value, "days": PASS_DAYS, "usd": PASS_PRICE.usd, "inr": PASS_PRICE.inr},
         }
+
+    def buy_pass(self, user: User, *, provider: str) -> CheckoutSession:
+        """One payment for a week of Pro. Buying again while a pass is running extends it."""
+        gateway = self.gateways.get(provider)
+        if gateway is None:
+            raise ValidationFailed("Unknown payment provider.")
+        if not gateway.configured:
+            raise ServiceUnavailable(f"{provider.title()} payments are not configured yet.")
+        return gateway.create_payment(
+            owner_id=user.id,
+            email=user.email,
+            plan_id=PASS_PLAN.value,
+            amount=PASS_PRICE.inr if provider == "razorpay" else PASS_PRICE.usd,
+            description=f"{get_plan(PASS_PLAN).name} for {PASS_DAYS} days (no renewal)",
+            success_url=f"{self.public_url}/account/billing?status=success",
+            cancel_url=f"{self.public_url}/pricing?status=cancelled",
+        )
+
+    def _apply_pass(self, event: SubscriptionEvent) -> None:
+        with self.db.session() as session:
+            if session.scalar(select(Subscription).where(Subscription.external_id == event.external_subscription_id)):
+                return  # webhook retried
+            if not event.owner_id or session.get(User, event.owner_id) is None:
+                log.warning("Pass payment %s for unknown user ignored", event.external_subscription_id)
+                return
+            running = session.scalars(
+                select(Subscription.current_period_end).where(
+                    Subscription.owner_type == "user",
+                    Subscription.owner_id == event.owner_id,
+                    Subscription.status == "pass",
+                )
+            ).all()
+            start = max([utcnow(), *(as_utc(end) for end in running if end)])
+            session.add(
+                Subscription(
+                    owner_type="user",
+                    owner_id=event.owner_id,
+                    provider=event.provider,
+                    external_id=event.external_subscription_id,
+                    external_customer_id=event.external_customer_id,
+                    plan_id=event.plan_id or PASS_PLAN.value,
+                    status="pass",
+                    current_period_end=start + timedelta(days=PASS_DAYS),
+                )
+            )
 
     def checkout(
         self,
@@ -106,6 +153,8 @@ class BillingService:
     def apply(self, event: SubscriptionEvent) -> None:
         if event.kind == "ignored" or not event.external_subscription_id:
             return
+        if event.kind == "paid":
+            return self._apply_pass(event)
         with self.db.session() as session:
             sub = session.scalar(select(Subscription).where(Subscription.external_id == event.external_subscription_id))
             if sub is None:

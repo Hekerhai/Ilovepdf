@@ -57,6 +57,23 @@ export function PricingTable() {
     }
   }
 
+  async function buyPass() {
+    if (!user) {
+      router.push(`/register?next=/pricing`);
+      return;
+    }
+    setBusy("pass");
+    setError(null);
+    try {
+      const session = await api.buyPass(currency === "inr" ? "razorpay" : "stripe");
+      if (session.url) window.location.href = session.url;
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
   if (!catalog) return <div className="mx-auto mt-12 h-96 max-w-5xl animate-pulse rounded-2xl bg-slate-200 dark:bg-slate-800" />;
 
   return (
@@ -111,6 +128,19 @@ export function PricingTable() {
           );
         })}
       </div>
+      {catalog.pass && (
+        <div className="card mx-auto mt-6 flex max-w-5xl flex-wrap items-center justify-between gap-4 p-5">
+          <div>
+            <h2 className="font-semibold">Just need it for a week?</h2>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Get everything in Pro for {catalog.pass.days} days for {money(catalog.pass[currency], currency)}. One payment, no subscription, nothing to cancel.
+            </p>
+          </div>
+          <button type="button" className="btn-secondary" disabled={busy !== null} onClick={buyPass}>
+            {busy === "pass" ? "Opening checkout…" : `Get a ${catalog.pass.days}-day pass`}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -155,8 +155,17 @@ function Billing() {
               {s.plan} {s.owner_type === "team" && `(team, ${s.seats} seats)`}
             </p>
             <p className="text-sm text-slate-500">
-              {s.provider} · {s.status}
-              {s.current_period_end && ` · renews ${new Date(s.current_period_end).toLocaleDateString()}`}
+              {s.status === "pass" ? (
+                <>
+                  {s.provider} · {s.current_period_end && new Date(s.current_period_end) > new Date() ? "pass, ends" : "pass, ended"}{" "}
+                  {s.current_period_end && new Date(s.current_period_end).toLocaleDateString()} · no renewal
+                </>
+              ) : (
+                <>
+                  {s.provider} · {s.status}
+                  {s.current_period_end && ` · renews ${new Date(s.current_period_end).toLocaleDateString()}`}
+                </>
+              )}
             </p>
           </div>
           {s.status === "active" && (
@@ -229,6 +238,7 @@ function ApiKeys() {
           </div>
         )}
       </div>
+      <WebhookSecret />
       {data?.keys.map((k) => (
         <div key={k.id} className="card flex items-center justify-between p-4">
           <div>
@@ -243,6 +253,37 @@ function ApiKeys() {
           </button>
         </div>
       ))}
+    </div>
+  );
+}
+
+function WebhookSecret() {
+  const [secret, setSecret] = useState<string | null>(null);
+  const [shown, setShown] = useState(false);
+  return (
+    <div className="card p-6">
+      <h2 className="font-semibold">Webhook signing secret</h2>
+      <p className="help">
+        Send <code>webhook_url</code> with a task and we POST to it when the task finishes, signed with this secret in the <code>Folio-Signature</code> header.{" "}
+        <Link href="/developers#webhooks" className="text-brand-600">How to verify it</Link>
+      </p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {shown && secret ? (
+          <>
+            <code className="input flex-1 overflow-x-auto font-mono text-xs">{secret}</code>
+            <button className="btn-secondary" onClick={() => navigator.clipboard.writeText(secret)} aria-label="Copy secret">
+              <Copy className="h-4 w-4" />
+            </button>
+            <button className="btn-ghost" onClick={async () => confirm("Replace the secret? Webhooks signed with the old one will stop verifying.") && setSecret((await api.webhookSecret(true)).secret)}>
+              Rotate
+            </button>
+          </>
+        ) : (
+          <button className="btn-secondary" onClick={async () => (setSecret((await api.webhookSecret()).secret), setShown(true))}>
+            Reveal secret
+          </button>
+        )}
+      </div>
     </div>
   );
 }

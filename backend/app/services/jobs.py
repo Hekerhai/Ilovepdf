@@ -16,7 +16,8 @@ from sqlalchemy import select
 from app.domain.errors import FolioError, Forbidden, NotFound, ValidationFailed
 from app.domain.ports import AIProvider, DocumentConverter, FileStorage, JobQueue
 from app.engines.ghostscript import Ghostscript
-from app.infra.db import Database, Job, as_utc, utcnow
+from app.infra.db import Database, Job, User, as_utc, utcnow
+from app.infra.webhooks import WebhookSender, check_url, new_webhook_secret
 from app.services.actors import Actor
 from app.services.quota import QuotaService
 from app.tools.base import PDF, Tool, ToolContext
@@ -67,6 +68,8 @@ class JobService:
         ghostscript: Ghostscript,
         ocr_languages: str,
         tool_timeout: int,
+        webhooks: WebhookSender | None = None,
+        public_url: str = "",
     ):
         self.db = db
         self.storage = storage
@@ -80,6 +83,8 @@ class JobService:
         self.ghostscript = ghostscript
         self.ocr_languages = ocr_languages
         self.tool_timeout = tool_timeout
+        self.webhooks = webhooks
+        self.public_url = public_url.rstrip("/")
 
     # ---- validation -------------------------------------------------------------------------
 
@@ -120,8 +125,14 @@ class JobService:
 
     # ---- lifecycle --------------------------------------------------------------------------
 
-    def create(self, actor: Actor, raw_steps: list[dict], uploads: list[Upload]) -> Job:
+    def create(
+        self, actor: Actor, raw_steps: list[dict], uploads: list[Upload], *, webhook_url: str | None = None
+    ) -> Job:
         steps = self.parse_steps(raw_steps)
+        if webhook_url:
+            if actor.user is None:
+                raise ValidationFailed("Webhooks need an account.")
+            check_url(webhook_url, allow_private=bool(self.webhooks and self.webhooks.allow_private))
         self.quota.check_tools(actor, [s.tool for s in steps])
         self.quota.check_files(actor, [u.size for u in uploads])
         self._check_inputs(steps[0].tool, uploads)
@@ -138,6 +149,8 @@ class JobService:
                 input_bytes=sum(u.size for u in uploads),
                 created_at=now,
                 expires_at=now + self.file_ttl,
+                webhook_url=webhook_url or None,
+                webhook_status="pending" if webhook_url else None,
             )
             session.add(job)
             session.flush()
@@ -186,6 +199,38 @@ class JobService:
             self._fail(job_id, "Something went wrong while processing your file.", "internal_error")
         finally:
             shutil.rmtree(work, ignore_errors=True)
+        self._notify(job_id)
+
+    def _notify(self, job_id: str) -> None:
+        """Call the job's webhook, if it has one. Runs in the worker after the job has finished."""
+        if self.webhooks is None:
+            return
+        with self.db.session() as session:
+            job = session.get(Job, job_id)
+            if job is None or not job.webhook_url or job.status not in ("succeeded", "failed"):
+                return
+            owner = session.get(User, job.user_id) if job.user_id else None
+            if owner is None:
+                return
+            if not owner.webhook_secret:
+                owner.webhook_secret = new_webhook_secret()
+            url, secret = job.webhook_url, owner.webhook_secret
+            succeeded = job.status == "succeeded"
+            payload = {
+                "id": job.id,
+                "status": job.status,
+                "output_name": job.output_name,
+                "output_bytes": job.output_bytes,
+                "error": job.error,
+                "error_code": job.error_code,
+                "expires_at": as_utc(job.expires_at).isoformat(),
+                # Download with the same API key; the link stops working when the file is deleted.
+                "download_url": f"{self.public_url}/v1/jobs/{job.id}/download" if succeeded else None,
+            }
+        event = {"type": f"job.{payload['status']}", "created": int(utcnow().timestamp()), "job": payload}
+        ok = self.webhooks.deliver(url, secret, event)
+        with self.db.session() as session:
+            session.get(Job, job_id).webhook_status = "delivered" if ok else "failed"
 
     def _fail(self, job_id: str, message: str, code: str) -> None:
         with self.db.session() as session:
@@ -210,6 +255,16 @@ class JobService:
         return archive
 
     # ---- queries ----------------------------------------------------------------------------
+
+    def describe_form(self, upload: Upload) -> list[dict]:
+        if not _looks_like_pdf(upload.path):
+            raise ValidationFailed(f"'{upload.name}' is not a valid PDF file.")
+        from app.tools.editor import describe_fields
+
+        try:
+            return describe_fields(upload.path)
+        except Exception:
+            raise ValidationFailed("This PDF's form couldn't be read. It may be encrypted or damaged.") from None
 
     def get(self, actor: Actor, job_id: str) -> Job:
         with self.db.session() as session:

@@ -78,3 +78,13 @@ def create_key(body: ApiKeyIn, a: Actor = Depends(user), c: Container = Depends(
 @router.delete("/api-keys/{key_id}", status_code=204)
 def revoke_key(key_id: str, a: Actor = Depends(user), c: Container = Depends(container)) -> None:
     c.auth.revoke_api_key(a.user.id, key_id)
+
+
+@router.get("/webhook-secret", summary="The secret that signs your API webhooks")
+def webhook_secret(a: Actor = Depends(user), c: Container = Depends(container)) -> dict:
+    return {"secret": c.auth.webhook_secret(a.user.id)}
+
+
+@router.post("/webhook-secret/rotate", summary="Replace the webhook secret")
+def rotate_webhook_secret(a: Actor = Depends(user), c: Container = Depends(container)) -> dict:
+    return {"secret": c.auth.webhook_secret(a.user.id, rotate=True)}
