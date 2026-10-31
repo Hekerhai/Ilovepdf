@@ -87,6 +87,7 @@ export type PublicConfig = {
   google_sign_in: boolean;
   ai_available: boolean;
   payments: Record<string, boolean>;
+  pickers?: { dropbox_app_key: string | null; google: { client_id: string; api_key: string; app_id: string | null } | null };
 };
 
 export type Workflow = { id: string; name: string; steps: Step[]; team_id: string | null; owner_id: string; updated_at: string };

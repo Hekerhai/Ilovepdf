@@ -24,4 +24,12 @@ def public_config(c: Container = Depends(container)) -> dict:
         "google_sign_in": c.auth.google_enabled,
         "ai_available": c.ai.available,
         "payments": {name: g.configured for name, g in c.billing.gateways.items()},
+        "pickers": {
+            "dropbox_app_key": s.dropbox_app_key,
+            "google": (
+                {"client_id": s.google_client_id, "api_key": s.google_picker_api_key, "app_id": s.google_app_id}
+                if s.google_client_id and s.google_picker_api_key
+                else None
+            ),
+        },
     }

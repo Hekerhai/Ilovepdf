@@ -15,6 +15,7 @@ from app.infra.payments.stripe_gateway import StripeGateway
 from app.infra.queue import InlineJobQueue, RQJobQueue
 from app.infra.ratelimit import MemoryRateLimiter, RedisRateLimiter
 from app.infra.storage import LocalStorage, S3Storage
+from app.infra.url_import import UrlImporter
 from app.infra.webhooks import WebhookSender
 from app.services.auth import AuthService
 from app.services.billing import BillingService
@@ -47,6 +48,7 @@ class Container:
     privacy: PrivacyService
     esign: ESignService
     documents: DocumentService
+    importer: UrlImporter
     limiter: MemoryRateLimiter | RedisRateLimiter
 
 
@@ -160,6 +162,7 @@ def build_container(settings: Settings | None = None) -> Container:
             public_url=s.public_url,
             brand_name=s.brand_name,
         ),
+        importer=UrlImporter(),
         limiter=MemoryRateLimiter() if s.queue_mode == "inline" else RedisRateLimiter(s.redis_url),
     )
 

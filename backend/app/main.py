@@ -8,7 +8,19 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.routes import account, auth, billing, documents, esign, jobs, public_v1, teams, tools, workflows
+from app.api.routes import (
+    account,
+    auth,
+    billing,
+    documents,
+    esign,
+    imports,
+    jobs,
+    public_v1,
+    teams,
+    tools,
+    workflows,
+)
 from app.config import get_settings
 from app.container import get_container
 from app.domain.errors import FolioError
@@ -71,7 +83,7 @@ def create_app() -> FastAPI:
         message = f"{where}: {first['msg']}" if where else first["msg"]
         return JSONResponse({"error": {"code": "invalid_input", "message": message}}, status_code=422)
 
-    for module in (tools, jobs, auth, account, teams, workflows, billing, esign, documents):
+    for module in (tools, jobs, auth, account, teams, workflows, billing, esign, documents, imports):
         app.include_router(module.router, prefix="/api")
     app.include_router(public_v1.router, prefix="/v1")
 

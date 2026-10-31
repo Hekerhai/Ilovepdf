@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ApiError } from "@/lib/api";
 import { chooseEngine } from "@/lib/engines";
 import { type Doc, documents } from "@/lib/documents";
+import { fromUrl } from "@/lib/importers";
 import { downloadBlob, formatBytes } from "@/lib/format";
 import { handOff, takeHandOff } from "@/lib/handoff";
 import { acceptsPdf, catalog } from "@/lib/tools";
@@ -59,6 +60,18 @@ export function ToolWorkspace({ tool }: { tool: ToolInfo }) {
           if (!r.ok) throw new Error("That document couldn't be opened.");
           const name = decodeURIComponent(/filename\*=UTF-8''([^;]+)/.exec(r.headers.get("content-disposition") ?? "")?.[1] ?? "document.pdf");
           setFiles([new File([await r.blob()], name, { type: r.headers.get("content-type") ?? "application/pdf" })]);
+        })
+        .catch((e) => setStatus({ phase: "error", message: e.message }));
+    }
+    // ?import=<link>, used by the browser extension's "Open in Folio".
+    const link = new URLSearchParams(window.location.search).get("import");
+    if (link) {
+      setStatus({ phase: "running", message: "Fetching the file…", fraction: 0.05 });
+      fromUrl(link)
+        .then((f) => {
+          if (!tool.accepts.some((ext) => f.name.toLowerCase().endsWith(ext))) throw new Error(`${tool.name} takes ${tool.accepts.join(", ")} files; that link gave “${f.name}”.`);
+          setFiles([f]);
+          setStatus({ phase: "idle" });
         })
         .catch((e) => setStatus({ phase: "error", message: e.message }));
     }

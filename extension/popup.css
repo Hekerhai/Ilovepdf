@@ -1,0 +1,13 @@
+:root { color-scheme: light dark; --brand: #2840f0; --line: #e2e8f0; --muted: #64748b; }
+@media (prefers-color-scheme: dark) { :root { --line: #334155; --muted: #94a3b8; } }
+body { font: 14px/1.4 system-ui, sans-serif; margin: 0; padding: 12px; width: 280px; }
+header { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 15px; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 8px 0 12px; }
+button { font: inherit; padding: 7px 8px; border-radius: 8px; border: 1px solid var(--line); background: transparent; cursor: pointer; text-align: left; }
+button:hover:not(:disabled) { border-color: var(--brand); color: var(--brand); }
+button:disabled { opacity: .45; cursor: default; }
+.muted { color: var(--muted); margin: 0; word-break: break-all; }
+.small { font-size: 12px; margin-top: 6px; }
+details { border-top: 1px solid var(--line); padding-top: 8px; }
+label { display: block; margin: 8px 0 6px; }
+input { display: block; width: 100%; box-sizing: border-box; margin-top: 4px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); font: inherit; background: transparent; }

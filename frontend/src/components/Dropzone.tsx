@@ -3,18 +3,22 @@
 import { Camera, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 
+import { ImportSources } from "@/components/ImportSources";
+
 export function Dropzone({
   accept,
   multiple,
   onFiles,
   compact = false,
   allowCamera = false,
+  allowImport = true,
 }: {
   accept: string[];
   multiple: boolean;
   onFiles: (files: File[]) => void;
   compact?: boolean;
   allowCamera?: boolean;
+  allowImport?: boolean;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const camera = useRef<HTMLInputElement>(null);
@@ -54,6 +58,7 @@ export function Dropzone({
         )}
       </div>
       {!compact && <p className="mt-3 text-sm text-slate-500">or drop {accept.join(", ")} files here</p>}
+      {!compact && allowImport && <ImportSources accept={accept} multiple={multiple} onFiles={onFiles} />}
       <input ref={input} type="file" hidden multiple={multiple} accept={accept.join(",")} onChange={(e) => (take(e.target.files), (e.target.value = ""))} />
       {allowCamera && (
         <input ref={camera} type="file" hidden accept="image/*" capture="environment" onChange={(e) => (take(e.target.files), (e.target.value = ""))} />

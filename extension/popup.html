@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Open in Folio</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header><img src="icons/32.png" alt="" width="20" height="20" /> <strong>Folio</strong></header>
+    <p id="target" class="muted">Checking this tab…</p>
+    <div id="tools" class="grid"></div>
+    <details>
+      <summary>Settings</summary>
+      <label>Your Folio address <input id="base" type="url" placeholder="https://pdf.example.com" /></label>
+      <button id="save" type="button">Save</button>
+      <p class="muted small">Links must be public: Folio fetches the file itself. Right-click any link for the same menu.</p>
+    </details>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

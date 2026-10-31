@@ -52,6 +52,11 @@ class Settings(BaseSettings):
     google_client_secret: str | None = None
     cookie_secure: bool = False
 
+    # Cloud pickers (both run in the browser; the keys are public, restricted to this site's domain)
+    dropbox_app_key: str | None = None  # Dropbox Chooser
+    google_picker_api_key: str | None = None  # Google Drive Picker; also needs google_client_id
+    google_app_id: str | None = None  # the Cloud project number, for the Picker
+
     # Mail
     smtp_host: str | None = None
     smtp_port: int = 1025
